@@ -1,0 +1,164 @@
+@extends('layouts.app')
+
+@section('content')
+
+@php
+    $meuSaldo = 5000;
+@endphp
+
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+  <!-- Content Header (Page header) -->
+  <div class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Detalhe Enfermeiro</h1>
+        </div><!-- /.col -->
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-right">
+            <li class="breadcrumb-item"><a href="{{ route('enfermeiros.index') }}">Voltar</a></li>
+            <li class="breadcrumb-item active">Enfermeiro</li>
+          </ol>
+        </div><!-- /.col -->
+      </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+  </div>
+  <!-- /.content-header -->
+
+  <!-- Main content -->
+  <section class="content">
+
+    <div class="card">
+      <div class="card-body">
+        <div class="row">
+
+          <div class="col-12 col-md-4">
+            <table class="table text-nowrap">
+              <tbody>
+                <tr>
+                  <th>Nome</th>
+                  <td class="text-right">{{ $enfermeiro->nome ?? '-------------' }}</td>
+                </tr>
+              
+                <tr>
+                  <th>Gênero</th>
+                  <td class="text-right">{{ $enfermeiro->genero ?? '-------------' }}</td>
+                </tr>
+
+                <tr>
+                  <th>Data Nascimento</th>
+                  <td class="text-right">{{ $enfermeiro->data_nascimento ?? '-------------' }}</td>
+                </tr>
+                
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="col-12 col-md-4">
+            <table class="table text-nowrap">
+              <tbody>
+
+                <tr>
+                  <th>País</th>
+                  <td class="text-right">{{ $enfermeiro->pais ?? '-------------' }}</td>
+                </tr>
+
+                <tr>
+                  <th>Estado Cívil</th>
+                  <td class="text-right">{{ $enfermeiro->estado_civil->nome ?? '-------------' }}</td>
+                </tr>
+                
+                <tr>
+                  <th>NIF/Bilhete</th>
+                  <td class="text-right">{{ $enfermeiro->nif ?? '-------------' }}</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="col-12 col-md-4">
+            <table class="table text-nowrap">
+              <tbody>
+
+                <tr>
+                  <th>Nome do Pai</th>
+                  <td class="text-right">{{ $enfermeiro->nome_do_pai ?? '-------------' }}</td>
+                </tr>
+
+                <tr>
+                  <th>Nome da Mãe</th>
+                  <td class="text-right">{{ $enfermeiro->nome_da_mae ?? '-------------' }}</td>
+                </tr>
+                
+                <tr>
+                  <th>Seguradora</th>
+                  <td class="text-right">{{ $enfermeiro->seguradora->nome ?? '-------------' }}</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <div class="col-12 col-md-12">
+            <table class="table text-nowrap">
+              <tbody>
+                <tr>
+                  <th>Morada</th>
+                  <th>Províncias</th>
+                  <th>Município</th>
+                  <th>Distrito</th>
+                </tr>
+                <tr>
+                  <td>{{ $enfermeiro->morada ?? '-------------' }} <br>{{ $enfermeiro->codigo_postal ?? '-------------' }}</td>
+                  <td>{{ $enfermeiro->provincia->nome ?? '-------------' }}</td>
+                  <td>{{ $enfermeiro->municipio->nome ?? '-------------' }}</td>
+                  <td>{{ $enfermeiro->distrito->nome ?? '-------------' }}</td>
+                </tr>
+                {{-- -------------------------------------------- --}}
+                <tr>
+                  <th colspan="4">Contactos</th>
+                </tr>
+                <tr>
+                  <td colspan="2">Telefone</td>
+                  <td colspan="2">Telemóvel</td>
+                </tr>
+                <tr>
+                  <td colspan="2">{{ $enfermeiro->telefone ?? '-------------' }}</td>
+                  <td colspan="2">{{ $enfermeiro->telemovel ?? '-------------' }}</td>
+                </tr>
+                {{-- -------------------------------------------- --}}
+                <tr>
+                  <th colspan="4">Contactos</th>
+                </tr>
+                <tr>
+                  <td colspan="2">E-mail</td>
+                  <td colspan="2">Website</td>
+                </tr>
+                <tr>
+                  <td colspan="2">{{ $enfermeiro->email ?? '-------------' }}</td>
+                  <td colspan="2">{{ $enfermeiro->website ?? '-------------' }}</td>
+                </tr>
+
+                <tr>
+                  <th colspan="4">Observação</th>
+                </tr>
+
+                <tr>
+                  <td colspan="4">{{ $enfermeiro->observacao ?? '-------------' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </section>
+  <!-- /.content -->
+</div>
+<!-- /.content-wrapper -->
+
+@endsection

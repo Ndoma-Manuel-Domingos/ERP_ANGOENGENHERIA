@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>FACTURA RECIBO</title>
+
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+            text-align: left;
+        }
+
+        body {
+            padding: 0px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        h1 {
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 12x;
+        }
+
+        p {
+            /* margin-bottom: 20px; */
+            line-height: 25px;
+            font-size: 12px;
+            text-align: justify;
+        }
+
+        strong {
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            text-align: left;
+            border-spacing: 0;
+            margin-bottom: 10px;
+            /* border: 1px solid rgb(0, 0, 0); */
+            font-size: 12px;
+        }
+
+        thead {
+            background-color: #fdfdfd;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 6px;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+        }
+
+        strong {
+            font-size: 12px;
+        }
+
+
+        .marca-dagua {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            text-transform: uppercase;
+            transform: translate(-50%, -50%);
+            font-size: 9em;
+            color: rgba(0, 0, 0, 0.1);
+            /* Cor do texto com transparência */
+            z-index: 1000;
+            /* Z-index alto para ficar acima do conteúdo */
+            pointer-events: none;
+            /* Evitar que o texto interfira com a interação do usuário */
+        }
+
+        /* Estilo para a impressão */
+        @media print {
+            @page {
+                margin: 10px;
+                /* Remove todas as margens da página */
+                background-color: #000;
+            }
+
+            .pagina {
+                width: 500px;
+                height: 100vh;
+                page-break-after: always;
+                /* Força quebra de página após cada seção */
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        /* Estilo para visualização na tela */
+        @media screen {
+            .pagina {
+                width: 500px;
+                height: 100vh;
+                margin-bottom: 20px;
+                border: 1px solid #ccc;
+                padding: 20px;
+            }
+        }
+
+    </style>
+
+</head>
+<body>
+
+    @if ($factura->anulado === 'Y')
+    <div class="marca-dagua">Anulada</div>
+    @endif
+
+
+    {{-- FACTURA RECIBO --}}
+    @if ($factura->factura == "FR")
+        <div class="pagina">
+            <header style="max-width: 300px; top: 10;right: 0;left: 0;">
+                <table>
+                    <tr>
+                        <td rowspan="">
+                            <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                        </td>
+                        <td style="text-align: right">
+                            <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
+                            {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
+                            ORGINAL
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0;">
+                            <strong>{{ $loja->empresa->nome }}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>Endereço:</strong> {{ $loja->empresa->morada }}
+                        </td>
+                        <td>DADOS CLIENTES</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>NIF:</strong> {{ $loja->empresa->nif }}
+                        </td>
+                        <td style="border-top: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px;">
+                            <strong style="font-size: 9px">{{ $factura->nome_cliente }}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>Telefone: </strong> {{ $loja->empresa->telefone }}
+                        </td>
+                        <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                            <strong>NIF:</strong>{{ $factura->documento_nif ?? '99999999999' }}
+                        </td>
+                    </tr>
+    
+                    <tr>
+                        <td>
+                            <strong>E-mail: </strong> {{ $loja->empresa->website }}
+                        </td>
+                    </tr>
+    
+                </table>
+            </header>
+    
+            <main style="max-width: 300px; top: 230px;right: 0;left: 0;">
+                <table>
+                    <tr>
+                        <td style="font-size: 13px">
+                            <strong>Luanda-Angola</strong> <br>
+                            <strong>FACTURA RECIBO</strong>
+                        </td>
+                    </tr>
+    
+                    <tr style="margin-top: 29px;display: block">
+                        @if ($factura->convertido_factura == "Y")
+                        <td style="font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }} conforme {{ $factura->numeracao_proforma }}</strong></td>
+                        @else
+                        <td style="font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
+                        @endif
+                    </tr>
+                </table>
+    
+                <table>
+                    <tr>
+                        <td style="font-size: 13px;padding: 1px 0">Moeda: <strong>{{ $loja->empresa->moeda ?? 'AOA' }} </strong></td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 13px;padding: 1px 0">Data de Emissão: {{ $factura->data_emissao }} - {{ date("H:i:s") }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 13px;text-transform: uppercase">Forma de Pagamento: {{ $factura->pagamento == 'NU' ? 'NUMERÁRIO' : ($factura->pagamento == 'OU' ? 'DUPLO' :'MULTICAIXA' )  }}</td>
+                    </tr>
+                    <tr>
+                        <th style="font-size: 13px;text-transform: uppercase">Cliente: {{ $factura->nome_cliente ?? "CONSUMIDOR FINAL" }} - NIF: {{ $factura->documento_nif ?? "999999999" }}</th>
+                    </tr>
+                </table>
+                @php
+                $numero = 0;
+                @endphp
+                @if (count($items_facturas) != 0)
+                <table class="table table-stripeds" style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;">
+                    <thead style="border-bottom: 1px dashed #000;">
+                        <tr>
+                            <th width="200px">Desc.</th>
+                            <th width="50px">Qtd</th>
+                            <th width="100px">Preço</th>
+                            <th width="200px">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($items_facturas as $item)
+                        <tr>
+                            <td>{{ $item->produto->nome ?? "" }}</td>
+                            <td>{{ number_format( $item->quantidade ?? 0, 1, ',', '.') }}</td>
+                            <td>{{ number_format($item->preco_unitario ?? 0, 2, ',', '.')  }}</td>
+                            <td>{{ number_format( $item->preco_unitario * $item->quantidade, 2, ',', '.') }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @endif
+    
+                <table style="margin-top: 50px ">
+                    <thead>
+                        <tr>
+                            <th style="padding: 4px 0">Taxa%</th>
+                            <th>Incidência</th>
+                            <th>Valor Imposto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (count($items_facturas) != 0)
+                        @if ($total_incidencia_ise >= 0 || $total_iva_ise >= 0)
+                        <tr>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">0</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        </tr>
+                        @endif
+    
+                        @if ($total_incidencia_out != 0 || $total_iva_out != 0)
+                        <tr>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">7</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_out, 2, ',', '.') }}</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_out, 2, ',', '.') }}</td>
+                        </tr>
+                        @endif
+    
+                        @if ($total_incidencia_nor != 0 || $total_iva_nor != 0)
+                        <tr>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">14</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_nor, 2, ',', '.') }}</td>
+                            <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_nor, 2, ',', '.') }}</td>
+                        </tr>
+                        @endif
+    
+                        @endif
+                    </tbody>
+    
+                </table>
+            </main>
+    
+            <footer style="max-width: 300px; bottom: 10;right: 0;left: 0;">
+                <table>
+                    <tr>
+                        <td>
+                            OPERADOR: {{ $factura->user->name }} <br>
+                            _______________________
+                        </td>
+                    </tr>
+                </table>
+                <table style="border-top: 2px solid #000000">
+                    <tbody>
+    
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>Total a Pagar:</strong> {{ number_format($factura->valor_total , '2', ',', '.') }}</td>
+                        </tr>
+    
+                        @if ($factura->pagamento == "NU")
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>DINHEIRO:</strong> {{ number_format($factura->valor_cash, '2', ',', '.') }}</td>
+                        </tr>
+                        @endif
+                        @if ($factura->pagamento == "MB")
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>MULTICAIXA:</strong> {{ number_format($factura->valor_multicaixa, '2', ',', '.') }}</td>
+                        </tr>
+                        @endif
+    
+                        @if ($factura->pagamento == "OU")
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>MULTICAIXA:</strong> {{ number_format($factura->valor_multicaixa, '2', ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>DINHEIRO:</strong> {{ number_format($factura->valor_cash, '2', ',', '.') }}</td>
+                        </tr>
+                        @endif
+    
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>Valor Entregue:</strong> {{ number_format($factura->valor_entregue , '2', ',', '.') }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;padding: 3px 0;width: 370px;" colspan="2"><strong>Troco:</strong> {{ number_format($factura->valor_troco , '2', ',', '.') }}</td>
+                        </tr>
+    
+                        <tr>
+                            <td style="padding: 3px 0;text-align: left;margin-top: 30px;display: block;font-style: italic" colspan="2">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                        </tr>
+    
+                        <tr>
+                            <td style="padding: 3px 0;text-align: left;" colspan="2">{{ $factura->obterCaracteres($factura->hash) }}</td>
+                        </tr>
+                        <tr style="">
+                            <td style="padding: 3px 0; text-align: left;border-top: 2px solid #000000" colspan="2">{{ $factura->valor_extenso ?? 'sem descrição do valor por extensão' }}</td>
+                        </tr>
+    
+                        <tr style="">
+                            <td style="padding: 3px 0; text-align: left;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }}</td>
+                        </tr>
+    
+                    </tbody>
+                </table>
+            </footer>
+        </div>
+    
+        <!-- Conteúdo da segunda página -->
+        <div class="pagina">
+            <h1 style="font-size: 30px;text-align: center">PEDIDO</h1>
+            @if (count($items_facturas) != 0)
+            <table style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;margin-top: 50px">
+                <thead style="border-bottom: 1px dashed #000;">
+                    <tr>
+                        <th style="padding: 2px 0;font-size: 25px">N.º</th>
+                        <th style="padding: 2px 0;font-size: 25px">Desc</th>
+                        <th style="padding: 2px 0;font-size: 25px">Qtd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($items_facturas as $item)
+                    <tr>
+                        <td style="padding: 2px 0;font-size: 25px">#</td>
+                        <td style="padding: 2px 0;font-size: 25px" colspan="3">{{ $item->produto->nome ?? "" }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px 0 6px 0;font-size: 25px;text-align: right;border-bottom: 2px dashed #000"></td>
+                        <td style="padding: 2px 0 6px 0;font-size: 25px;text-align: right;border-bottom: 2px dashed #000"></td>
+                        <td style="padding: 2px 0 6px 0;font-size: 25px;text-align: left;border-bottom: 2px dashed #000">{{ $item->quantidade ?? "" }}</td>
+                    </tr>
+                    <hr>
+                    @endforeach
+                </tbody>
+            </table>
+            @endif
+    
+            <table style="border-top: 2px solid #000000;margin-top: 30px">
+                <tbody>
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: left;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    @endif
+
+
+    {{-- FACTURA FACTURA --}}
+    @if ($factura->factura == "FT")
+
+        <header style="max-width: 300px;top: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td rowspan="">
+                        <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    </td>
+                    <td style="text-align: right">
+                        <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
+                        {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
+                        ORGINAL
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0;">
+                        <strong>{{ $loja->empresa->nome }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Endereço:</strong> {{ $loja->empresa->morada }}
+                    </td>
+                    <td>DADOS CLIENTES</td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>NIF:</strong> {{ $loja->empresa->nif }}
+                    </td>
+                    <td style="border-top: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px;">
+                        <strong style="font-size: 9px">{{ $factura->nome_cliente }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Telefone: </strong> {{ $loja->empresa->telefone }}
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>NIF:</strong>{{ $factura->documento_nif ?? '99999999999' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Endereço: </strong> {{ $factura->cliente->morada ?? 'Endereço' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Telefone: </strong> {{ $factura->cliente->telefone }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+                        <strong>E-mail: </strong> {{ $loja->empresa->website }}
+                    </td>
+                    <td style="border-bottom: #eaeaea 1px solid;border-right: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Conta Corrente N.º: </strong> {{ $factura->cliente->conta }}
+                    </td>
+                </tr>
+    
+    
+            </table>
+        </header>
+    
+        <main style="max-width: 300px;top: 230px;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td style="font-size: 13px">
+                        <strong>Luanda-Angola</strong> <br>
+                        <strong>FACTURA</strong>
+                    </td>
+                </tr>
+    
+                <tr style="margin-top: 29px;display: block">
+                    @if ($factura->convertido_factura == "Y")
+                    <td style="font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }} conforme {{ $factura->numeracao_proforma }}</strong></td>
+                    @else
+                    <td style="font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
+                    @endif
+                </tr>
+            </table>
+    
+            <table>
+                <tr>
+                    <td style="font-size: 9px;padding: 1px 0">Moeda: <strong>{{ $loja->empresa->moeda ?? 'AOA' }} </strong></td>
+                    <td style="font-size: 9px;padding: 1px 0">Data de Emissão: {{ $factura->data_emissao }}</td>
+                </tr>
+            </table>
+            @php
+            $numero = 0;
+            @endphp
+            @if (count($items_facturas) != 0)
+            <table class="table table-stripeds" style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;">
+                <thead style="border-bottom: 1px dashed #000;x">
+                    <tr>
+                        <th style="padding: 2px 0">N.º</th>
+                        <th>Descrição</th>
+                        <th>Qtd.</th>
+                        <th>Preço Unitário</th>
+                        <th>Un.</th>
+                        <th>Desconto</th>
+                        <th>Taxa%</th>
+                        <th style="text-align: right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($items_facturas as $item)
+                    @php
+                    $numero++;
+                    @endphp
+                    <tr>
+                        <td style="padding: 2px 0">{{ $numero }}</td>
+                        <td>{{ $item->produto->nome }}</td>
+                        <td>{{ number_format( $item->quantidade, 1, ',', '.') }}</td>
+                        <td>{{ number_format($item->preco_unitario, 2, ',', '.')  }}</td>
+                        <td>{{ $item->produto->unidade }}</td>
+                        <td>{{ number_format( $item->desconto_aplicado, 1, ',', '.') }}</td>
+                        <td>{{ number_format( $item->exibir_imposto_iva($item->iva), 1, ',', '.') }}</td>
+                        <td style="text-align: right">{{ number_format( $item->valor_pagar, 2, ',', '.') }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            @endif
+    
+            <table style="margin-top: 50px ">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th style="padding: 4px 0">Taxa%</th>
+                        <th>Incidência</th>
+                        <th>Valor Imposto</th>
+                        <th>Motivo de Isenção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (count($items_facturas) != 0)
+                    @if ($total_incidencia_ise >= 0 || $total_iva_ise >= 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">ISENTO</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">0</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">Isento nos termos da alínea d) do nº1 do artigo 12.º do CIVA </td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_out != 0 || $total_iva_out != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">7</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_nor != 0 || $total_iva_nor != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">14</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+    
+                    @endif
+                </tbody>
+    
+            </table>
+        </main>
+    
+        <footer style="max-width: 300px;bottom: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td>
+                        OPERADOR: {{ $factura->user->name }} <br>
+                        _______________________
+                    </td>
+                </tr>
+            </table>
+            <table style="border-top: 2px solid #000000">
+                <tbody>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Ilíquido:</strong> {{ number_format($factura->total_incidencia, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Desconto:</strong> {{ number_format($factura->desconto, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Observação: {{ $factura->observacao }}</td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Imposto:</strong> {{ number_format($factura->total_iva, '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total á pagar:</strong> {{ number_format($factura->valor_total , '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;color: red">Retenção: 0,00</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;font-style: italic">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;">{{ $factura->obterCaracteres($factura->hash) }}</td>
+                        <td style="text-align: right;padding: 3px 0;">{{ date("H:i:s") }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">{{ $factura->valor_extenso ?? 'sem descrição do valor por extensão' }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }} </td>
+                    </tr>
+    
+                </tbody>
+            </table>
+        </footer>
+
+    @endif
+
+    @if ($factura->factura == "NC")
+        <header style="max-width: 300px;top: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td rowspan="">
+                        <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    </td>
+                    <td style="text-align: right">
+                        <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
+                        {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
+                        ORGINAL
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0;">
+                        <strong>{{ $loja->empresa->nome }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Endereço:</strong> {{ $loja->empresa->morada }}
+                    </td>
+                    <td>DADOS CLIENTES</td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>NIF:</strong> {{ $loja->empresa->nif }}
+                    </td>
+                    <td style="border-top: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px;">
+                        <strong style="font-size: 9px">{{ $factura->nome_cliente }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Telefone: </strong> {{ $loja->empresa->telefone ?? '244 222 222 222'}}
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>NIF:</strong> {{ $factura->documento_nif ?? '99999999999' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Endereço: </strong> {{ $factura->cliente->morada ?? 'Endereço' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Telefone: </strong> {{ $factura->cliente->telefone ?? '244 222 222 222' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+                        <strong>E-mail: </strong> {{ $loja->empresa->website }}
+                    </td>
+                    <td style="border-bottom: #eaeaea 1px solid;border-right: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Conta Corrente N.º: </strong> {{ $factura->cliente->conta ?? '31.1.2.1.1' }}
+                    </td>
+                </tr>
+    
+    
+            </table>
+        </header>
+    
+        <main style="max-width: 300px;top: 230px;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td style="font-size: 13px">
+                        <strong>Luanda-Angola</strong> <br>
+                        <strong>NOTA DE CRÉDITO</strong>
+                    </td>
+    
+                    @if ($factura->convertido_factura == "Y")
+                    <td style="font-size: 13px;margin-top: 5px;display: block;float: right"><strong>{{ $factura->factura_next }} conforme {{ $factura->numeracao_proforma }}</strong></td>
+                    @else
+                    <td style="font-size: 13px;margin-top: 5px;display: block;float: right"><strong>{{ $factura->factura_next }}</strong></td>
+                    @endif
+                </tr>
+    
+            </table>
+    
+            <table>
+                <tr>
+                    <td style="font-size: 9px;padding: 1px 0">Moeda: <strong>{{ $loja->empresa->moeda ?? 'AOA' }} </strong></td>
+                    <td style="font-size: 9px;padding: 1px 0">Data de Emissão: {{ $factura->data_emissao }}</td>
+                </tr>
+            </table>
+            @php
+            $numero = 0;
+            @endphp
+            @if (count($items_facturas) != 0)
+            <table class="table table-stripeds" style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;">
+                <thead style="border-bottom: 1px dashed #000;x">
+                    <tr>
+                        <th style="padding: 2px 0">N.º</th>
+                        <th>Descrição</th>
+                        <th>Preço Unit.</th>
+                        <th>Qtd</th>
+                        <th>Un.</th>
+                        <th>Desc. %</th>
+                        <th>Taxa. %</th>
+                        <th style="text-align: right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($items_facturas as $item)
+                    @php
+                    $numero++;
+                    @endphp
+                    <tr>
+                        <td style="padding: 2px 0">{{ $numero }}</td>
+                        <td>{{ $item->produto->nome }}</td>
+                        <td>{{ number_format($item->preco_unitario, 2, ',', '.')  }} Kz</td>
+                        <td>{{ number_format( $item->quantidade, 1, ',', '.') }}</td>
+                        <td>{{ $item->produto->unidade }}</td>
+                        <td>{{ number_format( $item->desconto_aplicado, 1, ',', '.') }}</td>
+                        <td>{{ number_format( $item->exibir_imposto_iva($item->iva), 1, ',', '.') }}</td>
+                        <td style="text-align: right">{{ number_format( $item->valor_pagar, 2, ',', '.') }} KZ</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            @endif
+    
+            <table style="margin-top: 50px ">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th style="padding: 4px 0">Taxa/Valor</th>
+                        <th>Incid.Qtd</th>
+                        <th>Total</th>
+                        <th>Motivo Isenção/Codigo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (count($items_facturas) != 0)
+                    @if ($total_incidencia_ise >= 0 || $total_iva_ise >= 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">ISENTO</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">0</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">Isento nos termos da alínea d) do nº1 do artigo 12.º do CIVA</td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_out != 0 || $total_iva_out != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">7</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_nor != 0 || $total_iva_nor != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">14 </td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+                    @endif
+                </tbody>
+    
+            </table>
+        </main>
+    
+        <footer style="max-width: 300px;bottom: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td>
+                        OPERADOR: {{ $factura->user->name }} <br>
+                        _______________________
+                    </td>
+                </tr>
+            </table>
+            <table style="border-top: 2px solid #000000">
+                <tbody>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Inliquido:</strong> {{ number_format($factura->total_incidencia, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Desconto:</strong> {{ number_format($factura->desconto, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Observação: {{ $factura->observacao }}</td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Imposto:</strong> {{ number_format($factura->total_iva, '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;font-style: italic">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                        <td style="text-align: right;padding: 3px 0;">Data de Vencimento: {{ $factura->data_vencimento }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;font-style: italic">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;">{{ $factura->obterCaracteres($factura->hash) }}</td>
+                        <td style="text-align: right;padding: 3px 0;">{{ date("H:i:s") }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">{{ $factura->valor_extenso ?? 'sem descrição do valor por extensão' }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }} </td>
+                    </tr>
+    
+                </tbody>
+            </table>
+        </footer>
+    @endif
+
+    @if ($factura->factura == "RG")
+        <header style="max-width: 300px;top: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td rowspan="">
+                        <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    </td>
+                    <td style="text-align: right">
+                        <span>Pág: 1/1</span> <br> <br>
+                        {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0;">
+                        <strong>{{ $loja->empresa->nome }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Endereço:</strong> {{ $loja->empresa->morada }}
+                    </td>
+                    <td>DADOS CLIENTES</td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>NIF:</strong> {{ $loja->empresa->nif }}
+                    </td>
+                    <td style="border-top: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px;">
+                        <strong style="font-size: 9px">{{ $factura->nome_cliente }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Telefone: </strong> {{ $loja->empresa->telefone ?? '244 222 222 222'}}
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>NIF:</strong> {{ $factura->documento_nif ?? '99999999999' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Endereço: </strong> {{ $factura->cliente->morada ?? 'Endereço' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Telefone: </strong> {{ $factura->cliente->telefone ?? '244 222 222 222' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+                        <strong>E-mail: </strong> {{ $loja->empresa->website }}
+                    </td>
+                    <td style="border-bottom: #eaeaea 1px solid;border-right: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Conta Corrente N.º: </strong> {{ $factura->cliente->conta ?? '31.1.2.1.1' }}
+                    </td>
+                </tr>
+    
+    
+            </table>
+        </header>
+    
+        <main style="max-width: 300px;top: 230px;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td style="font-size: 13px">
+                        <strong>Luanda-Angola</strong> <br>
+                        <strong>RECIBO</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-size: 13px">
+                        <strong>ORGINAL</strong>
+                    </td>
+                    <td style="text-align: right;font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
+                </tr>
+    
+            </table>
+    
+            @php
+            $numero = 0;
+            @endphp
+            <table class="table table-stripeds" style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;">
+                <thead style="border-bottom: 1px dashed #000;x">
+                    <tr>
+                        <th style="padding: 2px 0">N.º</th>
+                        <th>Data documento</th>
+                        <th>Documento</th>
+                        <th>Total do documento</th>
+                        <th>Total Imposto</th>
+                        <th>Valor Pago</th>
+                        <th style="text-align: right;padding: 3px 0;">Dívida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 2px 0">1</td>
+                        <td>{{ $factura->data_emissao }}</td>
+                        <td>{{ $factura->facturas->factura_next }} </td>
+                        <td>{{ number_format( $factura->valor_total, 2, ',', '.') }}</td>
+                        <td>{{ number_format( $factura->total_iva, 2, ',', '.') }}</td>
+                        <td>{{ number_format( $factura->valor_total, 1, ',', '.') }}</td>
+                        <td style="text-align: right;padding: 3px 0;">{{ number_format( 0, 1, ',', '.') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+    
+            <table style="margin-top: 50px ">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th style="padding: 4px 0">Taxa%</th>
+                        <th>Incidência</th>
+                        <th>Valor Imposto</th>
+                        <th>Motivo de Isenção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (count($items_facturas) != 0)
+                    @if ($total_incidencia_ise >= 0 || $total_iva_ise >= 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">ISENTO</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">0</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">Isento nos termos da alínea d) do nº1 do artigo 12.º
+                            do CIVA </td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_out != 0 || $total_iva_out != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">7</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_nor != 0 || $total_iva_nor != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">14 </td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+    
+                    @endif
+                </tbody>
+    
+            </table>
+    
+        </main>
+    
+        <footer style="max-width: 300px;bottom: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td>
+                        OPERADOR: {{ $factura->user->name }} <br>
+                        _______________________
+                    </td>
+                </tr>
+            </table>
+            <table style="border-top: 2px solid #000000">
+                <tbody>
+    
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total:</strong> {{ number_format($factura->valor_total , '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;font-style: italic">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;">{{ $factura->obterCaracteres($factura->hash) }}</td>
+                        <td style="text-align: right;padding: 3px 0;">{{ date("H:i:s") }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">{{ $factura->valor_extenso ?? 'sem descrição do valor por extensão' }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }}</td>
+                    </tr>
+    
+                </tbody>
+            </table>
+        </footer>
+    @endif
+
+    {{-- FACTURA PRO-FORMA --}}
+    @if ($factura->factura == "PP")
+        <header style="max-width: 300px;top: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td rowspan="">
+                        <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    </td>
+                    <td style="text-align: right">
+                        <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
+                        {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
+                        ORGINAL
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0;">
+                        <strong>{{ $loja->empresa->nome }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Endereço:</strong> {{ $loja->empresa->morada }}
+                    </td>
+                    <td>DADOS CLIENTES</td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>NIF:</strong> {{ $loja->empresa->nif }}
+                    </td>
+                    <td style="border-top: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px;">
+                        <strong style="font-size: 9px">{{ $factura->nome_cliente }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <strong>Telefone: </strong> {{ $loja->empresa->telefone ?? '244 222 222 222'}}
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>NIF:</strong> {{ $factura->documento_nif ?? '99999999999' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Endereço: </strong> {{ $factura->cliente->morada ?? 'Endereço' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+    
+                    </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Telefone: </strong> {{ $factura->cliente->telefone ?? '244 222 222 222' }}
+                    </td>
+                </tr>
+    
+                <tr>
+                    <td>
+                        <strong>E-mail: </strong> {{ $loja->empresa->website }}
+                    </td>
+                    <td style="border-bottom: #eaeaea 1px solid;border-right: #eaeaea 1px solid;border-left: #eaeaea 1px solid; padding: 2px">
+                        <strong>Conta Corrente N.º: </strong> {{ $factura->cliente->conta ?? '31.1.2.1.1' }}
+                    </td>
+                </tr>
+    
+    
+            </table>
+        </header>
+    
+        <main style="max-width: 300px;top: 230px;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td style="font-size: 13px">
+                        <strong>Luanda-Angola</strong> <br>
+                        <strong>FACTURA PROFORMA</strong>
+                    </td>
+                </tr>
+    
+                <tr style="margin-top: 29px;display: block">
+                    <td style="font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
+                </tr>
+            </table>
+    
+            <table>
+                <tr>
+                    <td style="font-size: 9px;padding: 1px 0">Moeda: <strong>{{ $loja->empresa->moeda ?? 'AOA' }} </strong></td>
+                    <td style="font-size: 9px;padding: 1px 0">Data de Emissão: {{ $factura->data_emissao }}</td>
+                </tr>
+            </table>
+            @php
+            $numero = 0;
+            @endphp
+            @if (count($items_facturas) != 0)
+            <table class="table table-stripeds" style="border-top: 1px dashed #000;border-bottom: 1px dashed #000;">
+                <thead style="border-bottom: 1px dashed #000;x">
+                    <tr>
+                        <th style="padding: 2px 0">N.º</th>
+                        <th>Descrição</th>
+                        <th>Qtd</th>
+                        <th>Preço Unitário</th>
+                        <th>Un.</th>
+                        <th>Desconto</th>
+                        <th>Taxa%</th>
+                        <th style="text-align: right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($items_facturas as $item)
+                    @php
+                    $numero++;
+                    @endphp
+                    <tr>
+                        <td style="padding: 2px 0">{{ $numero }}</td>
+                        <td>{{ $item->produto->nome }}</td>
+                        <td>{{ number_format( $item->quantidade, 1, ',', '.') }}</td>
+                        <td>{{ number_format($item->preco_unitario, 2, ',', '.')  }}</td>
+                        <td>un</td>
+                        <td>{{ number_format( $item->desconto_aplicado, 1, ',', '.') }}</td>
+                        <td>{{ number_format( $item->exibir_imposto_iva($item->iva), 1, ',', '.') }}</td>
+                        <td style="text-align: right">{{ number_format( $item->preco_unitario * $item->quantidade, 2, ',', '.') }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            @endif
+    
+            <table style="margin-top: 50px ">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th style="padding: 4px 0">Taxa%</th>
+                        <th>Incidência</th>
+                        <th>Valor Imposto</th>
+                        <th>Motivo de Isenção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (count($items_facturas) != 0)
+                    @if ($total_incidencia_ise >= 0 || $total_iva_ise >= 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">ISENTO</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">0</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format(0, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">Isento nos termos da alínea d) do nº1 do artigo 12.º
+                            do CIVA </td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_out != 0 || $total_iva_out != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">7</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_out, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+                    @if ($total_incidencia_nor != 0 || $total_iva_nor != 0)
+                    <tr>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">IVA</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">14 </td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_incidencia_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;">{{ number_format($total_iva_nor, 2, ',', '.') }}</td>
+                        <td style="padding: 2px 0;border-top: 1px dashed #000;"></td>
+                    </tr>
+                    @endif
+    
+    
+                    @endif
+                </tbody>
+    
+            </table>
+        </main>
+    
+        <footer style="max-width: 300px;bottom: 10;right: 10px;left: 10px;">
+            <table>
+                <tr>
+                    <td>
+                        OPERADOR: {{ $factura->user->name }} <br>
+                        _______________________
+                    </td>
+                </tr>
+            </table>
+            <table style="border-top: 2px solid #000000">
+                <tbody>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Ilíquido:</strong> {{ number_format($factura->total_incidencia, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Desconto:</strong> {{ number_format($factura->desconto, '2', ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Observação: {{ $factura->observacao }}</td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total Imposto:</strong> {{ number_format($factura->total_iva, '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td></td>
+                        <td style="text-align: right;padding: 3px 0;"><strong>Total á pagar:</strong> {{ number_format($factura->valor_total , '2', ',', '.') }}</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;color: red">Retenção: 0,00</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 3px 0;color: red">
+                            <h1>Este documento não serve como factura</h1>
+                        </td>
+                    </tr>
+    
+    
+                    <tr>
+                        <td style="padding: 3px 0;margin-top: 30px;display: block;font-style: italic">Os bens/serviços foram colocados à disposição do adquirente na data do documento</td>
+                    </tr>
+    
+                    <tr>
+                        <td style="padding: 3px 0;">{{ $factura->obterCaracteres($factura->hash) }}</td>
+                        <td style="text-align: right;padding: 3px 0;">{{ date("H:i:s") }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">{{ $factura->valor_extenso ?? 'sem descrição do valor por extensão' }}</td>
+                    </tr>
+    
+                    <tr style="">
+                        <td style="padding: 3px 0; text-align: center;border-top: 2px solid #000000" colspan="2">Software de facturação, desenvolvido pela {{ env('APP_NAME') }} </td>
+                    </tr>
+    
+                </tbody>
+            </table>
+        </footer>
+    @endif
+
+    @if ($venda_realizado == "CAIXA")
+        <script>
+            window.print();
+            setTimeout(() => {
+                window.top.location = "/dashboard/pronto-venda";
+                return;
+            }, 2000);
+    
+        </script>
+    @endif
+    
+    @if ($venda_realizado == "MESA")
+        <script>
+            window.print();
+            setTimeout(() => {
+                window.top.location = "/dashboard/pronto-venda-mesas";
+                return;
+            }, 2000);
+    
+        </script>
+    @endif
+    
+    @if ($venda_realizado == "QUARTO")
+        <script>
+            window.print();
+            setTimeout(() => {
+                window.top.location = "/dashboard/pronto-venda-quartos";
+                return;
+            }, 2000);
+    
+        </script>
+    @endif
+    
+    @if ($venda_realizado != "QUARTO" AND $venda_realizado != "MESA" AND $venda_realizado != "CAIXA")
+        <script>
+            window.print();
+            setTimeout(() => {
+                window.top.location = "/dashboard/pronto-venda";
+                return;
+            }, 2000);
+    
+        </script>
+      
+    @endif
+
+</body>
+</html>
