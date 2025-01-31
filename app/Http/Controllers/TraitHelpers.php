@@ -109,15 +109,14 @@ Trait TraitHelpers{
     
     public function registra_operacoes($valor, $subconta_caixa,  $cliente, $type, $status, $code, $movimento, $data_emissao, $empresa, $observacao, $exercicio_id = 1, $periodo_id = 12)
     {
-        
         $operacoes = OperacaoFinanceiro::create([
             'nome' => $observacao,
             'status' => $status,
             'motante' => $valor,
             'subconta_id' => $subconta_caixa,
             'cliente_id' => $cliente,
-            'model_id' => 3,
-            'type' => "R",
+            'model_id' => 1,
+            'type' => $type,
             'status_pagamento' => $status,
             'code' => $code,
             'descricao' => $observacao,

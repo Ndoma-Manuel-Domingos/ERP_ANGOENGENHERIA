@@ -69,7 +69,7 @@ class ContabilidadeController extends Controller
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         $empresa = Entidade::with(['variacoes', 'categorias', 'marcas'])->findOrFail($entidade->empresa->id);
         
-        $produtos = Produto::when($request->nome_referencia, function($query, $value){
+        $produtos = Produto::where('tipo', 'P')->when($request->nome_referencia, function($query, $value){
             $query->where('nome', 'LIKE', "%{$value}%");
             $query->orWhere('referencia', 'LIKE', "%{$value}%");
         })
@@ -120,82 +120,60 @@ class ContabilidadeController extends Controller
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         $empresa = Entidade::with("variacoes")->with("categorias")->with("marcas")->findOrFail($entidade->empresa->id);
         
-        $bancoActivo = NULL;
-        $get_movimento_diario_banco = NULL;
-        
-        $caixaActivo = Caixa::where([
-            ['active', true],
-            ['status', '=', 'aberto'],
-            ['user_id', '=', Auth::user()->id],
-            ['entidade_id', '=', $entidade->empresa->id], 
-        ])->first();
- 
-        if($caixaActivo){
-        
-            $data = date("Y-m-d");
+        $data = date("Y-m-d");
 
-            $movimentos = Movimento::where('entidade_id', $entidade->empresa->id)
-            ->when($data, function ($query, $value) {
-                $query->whereDate('data_at', '>=', Carbon::createFromDate($value));
-            })
-            ->when($data, function ($query, $value) {
-                $query->whereDate('data_at', '<=', Carbon::createFromDate($value));
-            })
-            ->where('caixa_id', $caixaActivo->id)
-            ->where('code_caixa', $caixaActivo->code)
-            ->where('user_id', Auth::user()->id)
-            ->where('status_caixa', 1)
-            ->with(['user','caixa'])
-            ->where('entidade_id', '=', $entidade->empresa->id)
-            ->get();
+        $movimentos = Movimento::where('entidade_id', $entidade->empresa->id)
+        ->when($data, function ($query, $value) {
+            $query->whereDate('data_at', '>=', Carbon::createFromDate($value));
+        })
+        ->when($data, function ($query, $value) {
+            $query->whereDate('data_at', '<=', Carbon::createFromDate($value));
+        })
+        ->where('user_id', Auth::user()->id)
+        ->with(['user','subconta'])
+        ->where('entidade_id', '=', $entidade->empresa->id)
+        ->get();
+        
+        $credito = 0;
+        $debito = 0;
+        
+        $multicaixa = 0;
+        $multicaixa_credito = 0;
+        $multicaixa_debito = 0;
+        
+        $numerorio = 0;
+        $numerorio_credito = 0;
+        $numerorio_debito = 0;
+        
+        $duplo = 0;
+        $duplo_credito = 0;
+        $duplo_debito = 0;
             
-            $credito = 0;
-            $debito = 0;
+        foreach($movimentos as $item){
             
-            $multicaixa = 0;
-            $multicaixa_credito = 0;
-            $multicaixa_debito = 0;
-            
-            $numerorio = 0;
-            $numerorio_credito = 0;
-            $numerorio_debito = 0;
-            
-            $duplo = 0;
-            $duplo_credito = 0;
-            $duplo_debito = 0;
-                
-            foreach($movimentos as $item){
-                
-                if($item->forma_movimento == "NU"){
-                    $numerorio_credito += $item->credito;
-                    $numerorio_debito += $item->debito;
-                }
-                
-                if($item->forma_movimento == "MB"){
-                    $multicaixa_credito += $item->credito;
-                    $multicaixa_debito += $item->debito;
-                }
-                
-                if($item->forma_movimento == "OU"){
-                    $duplo_credito += $item->credito;
-                    $duplo_debito += $item->debito;
-                }
-            
-                $credito += $item->credito;
-                $debito += $item->debito;
+            if($item->forma_movimento == "NU"){
+                $numerorio_credito += $item->credito;
+                $numerorio_debito += $item->debito;
             }
             
-            $multicaixa = $multicaixa_debito - $multicaixa_credito;
-            $numerorio = $numerorio_debito - $numerorio_credito;
-            $duplo = $duplo_debito - $duplo_credito;
-
+            if($item->forma_movimento == "MB"){
+                $multicaixa_credito += $item->credito;
+                $multicaixa_debito += $item->debito;
+            }
             
-        }else{
-            Alert::error('Erro', 'Verifica se tens um caixa aberto, por favor!');
-            return redirect()->back();
+            if($item->forma_movimento == "OU"){
+                $duplo_credito += $item->credito;
+                $duplo_debito += $item->debito;
+            }
+        
+            $credito += $item->credito;
+            $debito += $item->debito;
         }
-       
-        $data = date("Y-m-d");
+        
+        $multicaixa = $multicaixa_debito - $multicaixa_credito;
+        $numerorio = $numerorio_debito - $numerorio_credito;
+        $duplo = $duplo_debito - $duplo_credito;
+
        
         $relatorios = Venda::with(['items', 'user', 'caixa','cliente'])
             ->where('entidade_id', $empresa->id)
@@ -253,9 +231,6 @@ class ContabilidadeController extends Controller
             "numerorio_debito" => $numerorio_debito,
             "duplo_credito" => $duplo_credito,
             "duplo_debito" => $duplo_debito,
-            
-            'bancoActivo' => $bancoActivo,
-            'get_movimento_diario_banco' => $get_movimento_diario_banco,
             
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];

@@ -12,7 +12,7 @@
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                             <li class="breadcrumb-item active">Inventário</li>
                         </ol>
                     </div><!-- /.col -->
@@ -77,8 +77,7 @@
                     <div class="col-12 col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <a href="{{ route('contabilidade-inventario-exportar-pdf') }}" target="_blink"
-                                    class="bg-danger btn btn-sm float-right">Exportar PDF</a>
+                                <a href="{{ route('contabilidade-inventario-exportar-pdf') }}" target="_blink" class="bg-danger btn btn-sm float-right">Exportar PDF</a>
                             </div>
                             <div class="card-body table-responsive">
                                 <table class="table table-hover text-nowrap" id="carregar_tabela"  style="width: 100%">
@@ -138,7 +137,6 @@
     </div>
     <!-- /.content-wrapper -->
 
-    @include('dashboard.config.modal.dados-empresa')
 @endsection
 
 

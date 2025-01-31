@@ -153,27 +153,14 @@
 
             let form = $(this);
             let formData = new FormData(); // Cria o objeto FormData
-            
-            // // Adiciona os dados serializados ao FormData
-            // let serializedData = form.serializeArray();
-            // $.each(serializedData, function(_, field) {
-            //     formData.append(field.name, field.value);
-            // });
-            
-            // // Adiciona o arquivo manualmente ao FormData
-            // let fileInput1 = $('#image1')[0].files[0];
-            // let fileInput2 = $('#image2')[0].files[0];
-            // if (fileInput1) {
-            //     formData.append('image1', fileInput1); // Adiciona o arquivo
-            // }
-            // if (fileInput2) {
-            //     formData.append('image2', fileInput2); // Adiciona o arquivo
-            // }
-
+           
             $.ajax({
                 url: form.attr('action'), // URL do endpoint no backend
                 method: form.attr('method'), // Método HTTP definido no formulário
                 data: formData, // Dados do formulário
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();

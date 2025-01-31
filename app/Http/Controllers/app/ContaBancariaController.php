@@ -117,53 +117,65 @@ class ContaBancariaController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            if($request->tipo_banco_id == "DO"){
-                $conta = Conta::where('conta', '43')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "43.1";
-                }else {
-                    $serie = "43.2";
-                }
-            }
-            if($request->tipo_banco_id == "DP"){
-                $conta = Conta::where('conta', '42')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "42.1";
-                }else {
-                    $serie = "42.2";
-                }
-            }
-            if($request->tipo_banco_id == "OD"){
-                $conta = Conta::where('conta', '44')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "44.1";
-                }else {
-                    $serie = "44.2";
-                }
-            }
-          
             $banco = Banco::findOrFail($request->banco_id);
-          
-            if($conta){
-                $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
+            
+            
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                if($request->tipo_banco_id == "DO"){
+                    $conta = Conta::where('conta', '43')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "43.1";
+                    }else {
+                        $serie = "43.2";
+                    }
+                }
+                if($request->tipo_banco_id == "DP"){
+                    $conta = Conta::where('conta', '42')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "42.1";
+                    }else {
+                        $serie = "42.2";
+                    }
+                }
+                if($request->tipo_banco_id == "OD"){
+                    $conta = Conta::where('conta', '44')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "44.1";
+                    }else {
+                        $serie = "44.2";
+                    }
+                }
+              
+              
+                if($conta){
+                    $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
+                    $numero =  $subc_ + 1;
+                    $nova_conta = $serie . "." . $numero;
+                    
+                    Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $banco->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }else{
+                    ######################
+                    ## depois vamos dar o tratamento
+                }
+            }else {
+                
+                $serie = "43.1";
+                
+                $subc_ = ContaBancaria::where('conta', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
                 $numero =  $subc_ + 1;
                 $nova_conta = $serie . "." . $numero;
                 
-                Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $banco->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            }else{
-                ######################
-                ## depois vamos dar o tratamento
-            }
-    
+            }   
+                 
             $banco = ContaBancaria::create([
                 'banco_id' => $request->banco_id,
                 'nome' => $banco->nome,
@@ -312,68 +324,74 @@ class ContaBancariaController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            if($request->tipo_banco_id == "DO"){
-                $conta = Conta::where('conta', '43')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "43.1";
-                }else {
-                    $serie = "43.2";
-                }
-            }
-            if($request->tipo_banco_id == "DP"){
-                $conta = Conta::where('conta', '42')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "42.1";
-                }else {
-                    $serie = "42.2";
-                }
-            }
-            if($request->tipo_banco_id == "OD"){
-                $conta = Conta::where('conta', '44')->first();
-                if($request->moeda == "KZ"){
-                    $serie = "44.1";
-                }else {
-                    $serie = "44.2";
-                }
-            }
-            
-                                  
             $conta_bancaria = ContaBancaria::with(['banco'])->findOrFail($id);
             $banco = Banco::findOrFail($request->banco_id);
             
-            $sub = Subconta::where('code', $conta_bancaria->code)->where('entidade_id', $entidade->empresa->id)->first();
-                        
-            if($sub){
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                if($request->tipo_banco_id == "DO"){
+                    $conta = Conta::where('conta', '43')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "43.1";
+                    }else {
+                        $serie = "43.2";
+                    }
+                }
+                if($request->tipo_banco_id == "DP"){
+                    $conta = Conta::where('conta', '42')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "42.1";
+                    }else {
+                        $serie = "42.2";
+                    }
+                }
+                if($request->tipo_banco_id == "OD"){
+                    $conta = Conta::where('conta', '44')->first();
+                    if($request->moeda == "KZ"){
+                        $serie = "44.1";
+                    }else {
+                        $serie = "44.2";
+                    }
+                }
                 
-                $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
-                $numero =  $subc_ + 1;
-                $nova_conta = $serie . "." . $numero;
                 
-                $sub_up = Subconta::findOrFail($sub->id);
-                $sub_up->conta_id = $conta->id;
-                $sub_up->nome = $banco->nome;
-                $sub_up->code = $code;
-                $sub_up->numero = $nova_conta;
-                $sub_up->update();
+                $sub = Subconta::where('code', $conta_bancaria->code)->where('entidade_id', $entidade->empresa->id)->first();
+                            
+                if($sub){
+                    
+                    $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
+                    $numero =  $subc_ + 1;
+                    $nova_conta = $serie . "." . $numero;
+                    
+                    $sub_up = Subconta::findOrFail($sub->id);
+                    $sub_up->conta_id = $conta->id;
+                    $sub_up->nome = $banco->nome;
+                    $sub_up->code = $code;
+                    $sub_up->numero = $nova_conta;
+                    $sub_up->update();
+                    
+                }else {
                 
+                    $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
+                    $numero =  $subc_ + 1;
+                    $nova_conta = $serie . "." . $numero;
+                    
+                    Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $banco->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                
+                }
             }else {
+                $nova_conta  = $conta_bancaria->conta;
+            }   
             
-                $subc_ = Subconta::where('conta_id', $conta->id)->where('numero', 'like', "{$serie}.%")->where('entidade_id', $entidade->empresa->id)->count();
-                $numero =  $subc_ + 1;
-                $nova_conta = $serie . "." . $numero;
-                
-                Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $banco->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
             
-            }
     
             $conta_bancaria->banco_id = $request->banco_id;
             $conta_bancaria->nome = $banco->nome;

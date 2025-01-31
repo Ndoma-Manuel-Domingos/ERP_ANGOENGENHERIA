@@ -15,7 +15,7 @@
                 <div class="col-lg-1"></div>
                 <!-- /.col-md-6 -->
                 <div class="col-lg-3">
-                    <a type="button" href="{{ route('facturas.edit', $id_back) }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Valtar</a>   
+                    <a type="button" href="{{ route('facturas.edit', $id_back) }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Voltar</a>   
                     <div class="card">
                         <div class="card-body">
                             <form action="{{ route('retificar-venda-update', $movimento->id) }}" class="row" method="post">

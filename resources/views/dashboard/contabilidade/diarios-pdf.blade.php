@@ -81,7 +81,7 @@
             <td>{{ $item->forma_pagamento($item->pagamento) }}</td>
             <td>{{ $item->cliente->nome }}</td>
             <td>{{ $item->user->name ?? "" }}</td>
-            <td>{{ $item->caixa->nome }}</td>
+            <td>{{ $item->caixa->nome ?? "" }}</td>
             <td style="text-align: right">{{ number_format($item->valor_total, 2, ',', '.') }}</td>
         </tr>
         @endforeach

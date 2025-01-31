@@ -160,6 +160,9 @@
                 data: formData, // Dados do formulário
                 processData: false, // Impede o processamento dos dados pelo jQuery
                 contentType: false, // Impede a configuração automática do cabeçalho
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();

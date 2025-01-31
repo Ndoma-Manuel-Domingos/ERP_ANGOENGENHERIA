@@ -101,12 +101,12 @@ class CarrinhoController extends Controller
         }
         
         $carrinho = Session::get('carrinho', []);
-        
         if (isset($carrinho[$produto->id])) {
             // Atualiza a quantidade
             $carrinho[$produto->id]['quantidade'] += $request->input('quantidade');
             // Recalcula o valor a pagar
-            $carrinho[$produto->id]['valor_pagar'] = $carrinho[$produto->id]['quantidade'] * $carrinho[$produto->id]['preco_venda'];
+            $carrinho[$produto->id]['valor_pagar'] = $carrinho[$produto->id]['quantidade'] * $carrinho[$produto->id]['preco'];
+            
         } else {
             // Adiciona novo produto ao carrinho com preço unitário
             $carrinho[$produto->id] = [
@@ -117,7 +117,6 @@ class CarrinhoController extends Controller
                 'valor_pagar' => $produto->preco_venda * $request->input('quantidade')
             ];
         }
-        
         // Salva o carrinho na sessão
         Session::put('carrinho', $carrinho);
         
@@ -128,6 +127,7 @@ class CarrinhoController extends Controller
         return response()->json([ 'success' => true, 'carrinho' => $carrinho, 'total' => $total, 'message' => 'Produto adicionado ao carrinho com sucesso!']);
         
        
+        
     }
 
     // Remove um produto do carrinho

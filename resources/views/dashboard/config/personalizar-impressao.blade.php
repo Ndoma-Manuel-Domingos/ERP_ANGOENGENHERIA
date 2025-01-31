@@ -79,7 +79,7 @@
 
                                 <div class="bs-stepper-content">
 
-                                    <form action="{{ route('personalizar-empressora.update', $tipo_entidade_logado->empresa->id) }}" method="post">
+                                    <form action="{{ route('personalizar-empressora.update', $tipo_entidade_logado->empresa->id) }}" method="post" enctype="multipart/form-data">
                                         @csrf
                                         @method('put')
                                         <!-- your steps content here -->
@@ -198,7 +198,7 @@
                                             <h6>Utilize o logótipo do seu negócio para personalizar as faturas, factura recibo, factura pro-forma, etc..</h6>
                                             <div class="form-group">
                                                 <label for="logotipo">Logotipo</label>
-                                                <input type="file" class="form-control" name="logotipo" id="logotipo" placeholder="logotipo">
+                                                <input type="file" class="form-control" accept="image/*" name="logotipo" id="logotipo2" placeholder="logotipo">
                                                 <input type="hidden" class="form-control" name="logotipo_guardado" value="{{ $tipo_entidade_logado->empresa->logotipo }}">
                                             </div>
                                             <p>Recomendamos a utilização do logo em formato rectangular, por exemplo, 300x60px</p>
@@ -237,12 +237,28 @@
             e.preventDefault(); // Impede o envio tradicional do formulário
 
             let form = $(this);
-            let formData = form.serialize(); // Serializa os dados do formulário
+            let formData = new FormData(); // Cria o objeto FormData
+            
+            // Adiciona os dados serializados ao FormData
+            let serializedData = form.serializeArray();
+            $.each(serializedData, function(_, field) {
+                formData.append(field.name, field.value);
+            });
+            
+            let fileInput2 = $('#logotipo2')[0].files[0];
+            if (fileInput2) {
+                formData.append('logotipo', fileInput2); // Adiciona o arquivo
+            }
 
             $.ajax({
                 url: form.attr('action'), // URL do endpoint no backend
                 method: form.attr('method'), // Método HTTP definido no formulário
                 data: formData, // Dados do formulário
+                processData: false, // Impede o processamento dos dados pelo jQuery
+                contentType: false, // Impede a configuração automática do cabeçalho
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();

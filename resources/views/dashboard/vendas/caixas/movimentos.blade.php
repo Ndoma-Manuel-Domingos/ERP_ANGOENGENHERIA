@@ -136,7 +136,7 @@
                                     
                                     <tr>
                                         <td>{{ $item->user->name ?? "" }}</td>
-                                        <td>{{ $item->caixa->nome }}</td>
+                                        <td>{{ $item->caixa->nome ?? "" }}</td>
                                         <td>{{ $item->data_abertura }}</td>
                                         <td>{{ $item->data_fecho }}</td>
                                         <td style="text-align: right">{{ number_format($item->valor_abertura, 2, ',', '.') }}</td>

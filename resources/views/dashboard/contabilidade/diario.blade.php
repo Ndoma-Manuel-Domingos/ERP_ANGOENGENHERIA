@@ -149,7 +149,7 @@
                                         <td>{{ $item->forma_pagamento($item->pagamento) }}</td>
                                         <td>{{ $item->cliente->nome }}</td>
                                         <td>{{ $item->user->name ?? "" }}</td>
-                                        <td>{{ $item->caixa->nome }}</td>
+                                        <td>{{ $item->caixa->nome ?? "" }}</td>
                                         <td>{{ number_format($item->valor_total, 2, ',', '.') }}</td>
                                         <td>
                                             <a href="{{ route('contabilidade-diarios-detalhe', $item->id) }}" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i></a>

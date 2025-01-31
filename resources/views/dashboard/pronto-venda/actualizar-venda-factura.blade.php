@@ -37,7 +37,7 @@
             <div class="row">
                 <!-- /.col-md-6 -->
                 <div class="col-lg-4 col-md-4 col-12">
-                    <a type="button" href="{{ route('facturas.create') }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Valtar</a>
+                    <a type="button" href="{{ route('facturas.create') }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Voltar</a>
                     <div class="card">
                         <div class="card-body">
                             <form action="{{ route('actualizar-venda-factura-update', $movimento->id) }}" class="row" method="post">

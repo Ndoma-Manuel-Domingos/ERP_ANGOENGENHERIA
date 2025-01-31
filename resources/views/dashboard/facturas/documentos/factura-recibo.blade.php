@@ -137,7 +137,7 @@
                         <td style="text-align: right">
                             <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                             {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                            ORGINAL
+                            ORIGINAL
                         </td>
                     </tr>
                     <tr>
@@ -391,7 +391,7 @@
                     <td style="text-align: right">
                         <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                         {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                        ORGINAL
+                        ORIGINAL
                     </td>
                 </tr>
                 <tr>
@@ -628,7 +628,7 @@
                     <td style="text-align: right">
                         <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                         {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                        ORGINAL
+                        ORIGINAL
                     </td>
                 </tr>
                 <tr>
@@ -928,7 +928,7 @@
                 </tr>
                 <tr>
                     <td style="font-size: 13px">
-                        <strong>ORGINAL</strong>
+                        <strong>ORIGINAL</strong>
                     </td>
                     <td style="text-align: right;font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
                 </tr>
@@ -1064,7 +1064,7 @@
                     <td style="text-align: right">
                         <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                         {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                        ORGINAL
+                        ORIGINAL
                     </td>
                 </tr>
                 <tr>

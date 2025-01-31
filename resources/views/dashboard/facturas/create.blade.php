@@ -113,7 +113,7 @@
                                                 </tfoot>
                                             </table>
 
-                                            <input type="hidden" value="{{ $total_pagar ??0 }}" name="total_pagar">
+                                            <input type="hidden" value="{{ $total_pagar ??0 }}" id="total_pagar" name="total_pagar">
                                             @endif
                                         </div>
                                     </div>
@@ -480,6 +480,9 @@
                 url: form.attr('action'), // URL do endpoint no backend
                 method: form.attr('method'), // Método HTTP definido no formulário
                 data: formData, // Dados do formulário
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();

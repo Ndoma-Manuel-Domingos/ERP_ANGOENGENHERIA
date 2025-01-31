@@ -41,7 +41,7 @@ class CaixaController extends Controller
     public function caixas()
     {
         $user = auth()->user();
-        
+    
         if(!$user->can('listar caixa')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");

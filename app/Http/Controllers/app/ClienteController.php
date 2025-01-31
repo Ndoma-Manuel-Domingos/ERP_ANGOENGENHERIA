@@ -37,7 +37,6 @@ class ClienteController extends Controller
     public function index(Request $request)
     {
         //
-      
         $user = auth()->user();
         
         if(!$user->can('listar cliente')){
@@ -78,7 +77,6 @@ class ClienteController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-
     
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         $empresa = Entidade::with("variacoes")->with('clientes')->with("marcas")->with("categorias")->findOrFail($entidade->empresa->id);
@@ -106,7 +104,6 @@ class ClienteController extends Controller
      */
     public function store_import(Request $request)
     {
-    
         //
         $user = auth()->user();
         
@@ -142,7 +139,6 @@ class ClienteController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
 
-
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         $empresa = Entidade::with("variacoes")->with('clientes')->with("marcas")->with("categorias")->findOrFail($entidade->empresa->id);
 
@@ -170,7 +166,6 @@ class ClienteController extends Controller
      */
     public function store(Request $request)
     {
-    
         //
         $user = auth()->user();
         
@@ -196,45 +191,71 @@ class ClienteController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            $conta = Conta::where('conta', '31')->first();
-            
-            if($request->tipo_cliente == "C"){
-                $numero_inicial = ENV('CLIENTES_CORRENTES');
-            }
-            if($request->tipo_cliente == "TR"){
-                $numero_inicial = ENV('CLIENTES_TITULOS_A_RECEBER');
-            }
-            if($request->tipo_cliente == "TD"){
-                $numero_inicial = ENV('CLIENTES_TITULOS_DESCONTADOS');
-            }
-            if($request->tipo_cliente == "CD"){
-                $numero_inicial = ENV('CLIENTES_COBRANCA_DUVIDOS');
-            }
-            if($request->tipo_cliente == "SC"){
-                $numero_inicial = ENV('CLIENTES_SALDO_CREDOR');
-            }
-            
-            if($conta){
-                $subc_ = Subconta::where('numero', 'like', $numero_inicial. "%")->where('entidade_id', $entidade->empresa->id)->count();
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                
+                $conta = Conta::where('conta', '31')->first();
+                
+                if($request->tipo_cliente == "C"){
+                    $numero_inicial = ENV('CLIENTES_CORRENTES');
+                }
+                if($request->tipo_cliente == "TR"){
+                    $numero_inicial = ENV('CLIENTES_TITULOS_A_RECEBER');
+                }
+                if($request->tipo_cliente == "TD"){
+                    $numero_inicial = ENV('CLIENTES_TITULOS_DESCONTADOS');
+                }
+                if($request->tipo_cliente == "CD"){
+                    $numero_inicial = ENV('CLIENTES_COBRANCA_DUVIDOS');
+                }
+                if($request->tipo_cliente == "SC"){
+                    $numero_inicial = ENV('CLIENTES_SALDO_CREDOR');
+                }
+                
+                if($conta){
+                    $subc_ = Subconta::where('numero', 'like', $numero_inicial. "%")->where('entidade_id', $entidade->empresa->id)->count();
+                    
+                    $numero =  $subc_ + 1;
+                    $nova_conta = "{$numero_inicial}{$numero}";
+                    
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }else{
+                    ######################
+                    ## depois vamos dar o tratamento
+                }
+                
+            }else {
+             
+                if($request->tipo_cliente == "C"){
+                    $numero_inicial = ENV('CLIENTES_CORRENTES');
+                }
+                if($request->tipo_cliente == "TR"){
+                    $numero_inicial = ENV('CLIENTES_TITULOS_A_RECEBER');
+                }
+                if($request->tipo_cliente == "TD"){
+                    $numero_inicial = ENV('CLIENTES_TITULOS_DESCONTADOS');
+                }
+                if($request->tipo_cliente == "CD"){
+                    $numero_inicial = ENV('CLIENTES_COBRANCA_DUVIDOS');
+                }
+                if($request->tipo_cliente == "SC"){
+                    $numero_inicial = ENV('CLIENTES_SALDO_CREDOR');
+                }
+                
+                $subc_ = Cliente::where('conta', 'like', $numero_inicial. "%")->where('entidade_id', $entidade->empresa->id)->count();
                 
                 $numero =  $subc_ + 1;
                 $nova_conta = "{$numero_inicial}{$numero}";
                 
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            }else{
-                ######################
-                ## depois vamos dar o tratamento
             }
-            
             
             $clientes = Cliente::create([
                 "nif" => $request->nif,
@@ -459,63 +480,69 @@ class ClienteController extends Controller
                 $numero_inicial = ENV('CLIENTES_SALDO_CREDOR');
             }
             
+            
             $code = uniqid(time());
             $nova_conta = "";
-            
-            $conta = Conta::where('conta', '31')->first();
-            
-            if($clientes->code == NULL){
-                if($conta){
-                                        
-                    $subc_ = Subconta::where('numero', 'like', $numero_inicial."%")->where('entidade_id', $entidade->empresa->id)->count();
-                  
-                    $numero =  $subc_ + 1;
-                    $nova_conta = "{$numero_inicial}{$numero}";
-                    
-                    $subconta = Subconta::create([
-                        'entidade_id' => $entidade->empresa->id, 
-                        'numero' => $nova_conta,
-                        'nome' => $request->nome,
-                        'tipo_conta' => 'M',
-                        'code' => $code,
-                        'status' => $conta->status,
-                        'conta_id' => $conta->id,
-                        'user_id' => Auth::user()->id,
-                    ]);
-                }else{
-                    ######################
-                    ## depois vamos dar o tratamento
-                }
-            }else {
                 
-                if($request->tipo_cliente == $clientes->tipo_cliente){
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
                 
-                    $subc_ = Subconta::where('code', $clientes->code)->where('entidade_id', $entidade->empresa->id)->first();
-                    $nova_conta = $clientes->conta;
-                    
-                    if($subc_){
-                        $subc_up = Subconta::findOrFail($subc_->id);
-                        $subc_up->numero = $nova_conta;
-                        $subc_up->code = $code;
-                        $subc_up->nome = $request->nome;
-                        $subc_up->update();
+                $conta = Conta::where('conta', '31')->first();
+                
+                if($clientes->code == NULL){
+                    if($conta){
+                                            
+                        $subc_ = Subconta::where('numero', 'like', $numero_inicial."%")->where('entidade_id', $entidade->empresa->id)->count();
+                      
+                        $numero =  $subc_ + 1;
+                        $nova_conta = "{$numero_inicial}{$numero}";
+                        
+                        $subconta = Subconta::create([
+                            'entidade_id' => $entidade->empresa->id, 
+                            'numero' => $nova_conta,
+                            'nome' => $request->nome,
+                            'tipo_conta' => 'M',
+                            'code' => $code,
+                            'status' => $conta->status,
+                            'conta_id' => $conta->id,
+                            'user_id' => Auth::user()->id,
+                        ]);
+                    }else{
+                        ######################
+                        ## depois vamos dar o tratamento
                     }
                 }else {
-                    $subc_ = Subconta::where('numero', 'like', $numero_inicial."%")->where('entidade_id', $entidade->empresa->id)->count();
-                  
-                    $numero =  $subc_ + 1;
-                    $nova_conta = "{$numero_inicial}{$numero}";
-                
-                    if($subc_){
-                        $subc_up = Subconta::findOrFail($subc_->id);
-                        $subc_up->numero = $nova_conta;
-                        $subc_up->code = $code;
-                        $subc_up->nome = $request->nome;
-                        $subc_up->update();
+                    
+                    if($request->tipo_cliente == $clientes->tipo_cliente){
+                    
+                        $subc_ = Subconta::where('code', $clientes->code)->where('entidade_id', $entidade->empresa->id)->first();
+                        $nova_conta = $clientes->conta;
+                        
+                        if($subc_){
+                            $subc_up = Subconta::findOrFail($subc_->id);
+                            $subc_up->numero = $nova_conta;
+                            $subc_up->code = $code;
+                            $subc_up->nome = $request->nome;
+                            $subc_up->update();
+                        }
+                    }else {
+                        $subc_ = Subconta::where('numero', 'like', $numero_inicial."%")->where('entidade_id', $entidade->empresa->id)->count();
+                      
+                        $numero =  $subc_ + 1;
+                        $nova_conta = "{$numero_inicial}{$numero}";
+                    
+                        if($subc_){
+                            $subc_up = Subconta::findOrFail($subc_->id);
+                            $subc_up->numero = $nova_conta;
+                            $subc_up->code = $code;
+                            $subc_up->nome = $request->nome;
+                            $subc_up->update();
+                        }
                     }
                 }
+                
+            }else {
+                $nova_conta = $clientes->conta;
             }
-            
             
             
             

@@ -103,7 +103,7 @@
                     <td style="text-align: right">
                         <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                         {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                        ORGINAL
+                        ORIGINAL
                     </td>
                 </tr>
                 <tr>
@@ -339,17 +339,16 @@
     @endif
     
     @if ($loja->empresa->tipo_factura == "Ticket")
-      
     <header style="position: absolute;top: 30;right: 30px;left: 30px;width: 250px">
         <table>
             <tr>
                 <td rowspan="">
-                    <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 80px;width: 70px;">
                 </td>
                 <td style="text-align: right">
                     <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                     {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                    ORGINAL
+                    ORIGINAL
                 </td>
             </tr>
             <tr>
@@ -531,7 +530,7 @@
                 
                 <tr>
                     <td style="text-transform: uppercase;color: #222222;font-weight: bolder">BANCO: {{ $loja->empresa->banco1 }}</td>
-                    <td style="padding: 3px 0;margin-top: 30px;display: block;color: red">Retenção: {{ number_format($total_retencao , '2', ',', '.')}}</td>
+                    <td style="padding: 3px 0;margin-top: 30px;display: block;color: red">Retenção: {{ number_format($factura->total_retencao_fonte , '2', ',', '.')}}</td>
                 </tr>
            
                 <tr>

@@ -196,6 +196,9 @@
                     url: form.attr('action'), // URL do endpoint no backend
                     method: form.attr('method'), // Método HTTP definido no formulário
                     data: formData, // Dados do formulário
+                    headers: {
+                        "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                    },
                     beforeSend: function() {
                         // Você pode adicionar um loader aqui, se necessário
                         progressBeforeSend();
@@ -203,9 +206,10 @@
                     , success: function(response) {
                         // Feche o alerta de carregamento
                         Swal.close();
-    
+                
                         showMessage('Sucesso!', 'Seja bem vindo ao sistema!', 'success');
-    
+                        //console.log(response.redirect)
+                        //return
                         window.location.href = response.redirect;
     
                         // window.location.reload();

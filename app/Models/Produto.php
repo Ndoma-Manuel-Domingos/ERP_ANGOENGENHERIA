@@ -183,8 +183,6 @@ class Produto extends Model
         $totalStock = Estoque::where([
             ['codigo_barra', $id],
         ])->id;
-		
-		dd($totalStock);
 
         return $totalStock;
     }

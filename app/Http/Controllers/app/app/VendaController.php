@@ -2551,6 +2551,11 @@ class VendaController extends Controller
                         ->where('produto_id', $movimento->produto_id)
                         ->where('entidade_id', $entidade->empresa->id)
                         ->sum('stock');
+                        
+                    $stock_gestao = Estoque::where('loja_id', $loja->id)
+                        ->where('produto_id', $movimento->produto_id)
+                        ->where('entidade_id', $entidade->empresa->id)
+                        ->first();
                     
                     $verificar_quantidade = (int) $verificar_quantidade;
                     
@@ -2559,7 +2564,7 @@ class VendaController extends Controller
                         return redirect()->back()->with('warning', 'A Loja activa não têm esta quantidade de produto em stock para poder comercializar!');
                     }
         
-                    if($quantidade_final > $produto->estoque->stock){
+                    if($quantidade_final > $verificar_quantidade){
                         Alert::warning('Atenção', 'A quantidade Adiciona nesta compra e maior do que a existente no Stock!');
                         return redirect()->back()->with('danger', 'A quantidade Adiciona nesta compra e maior do que a existente no Stock!');
                     }
@@ -2567,7 +2572,7 @@ class VendaController extends Controller
     
                 $desconto = ($request->preco_unitario * $quantidade_final) * ($request->desconto_aplicado ?? 0) / 100;
     
-                $produto->estoque->stock = ($produto->estoque->stock + $movimento->quantidade) - $quantidade_final;
+                // $produto->estoque->stock = ($produto->estoque->stock + $movimento->quantidade) - $quantidade_final;
     
                 $valorBase = $request->preco_unitario * $quantidade_final; 
                 // calculo do iva
@@ -2599,7 +2604,13 @@ class VendaController extends Controller
                 
                 if ($produto->tipo == 'P') {
                     if($movimento->update()){
-                        $produto->estoque->update();
+                        
+                        $stock = Estoque::find($stock_gestao->id);
+                        if($stock){
+                           $stock->stock = ($stock->stock  + $movimento->quantidade) - $quantidade_final; 
+                           $stock->update(); 
+                        }
+                    
                     }else{
                         Alert::error('Erro', 'Ao tentar actualizar os dodos deste produto nesta venda');
                         return redirect()->route('facturas.create')->with('Aconteceu um erro por isso não concluimos facturação deste produto!');

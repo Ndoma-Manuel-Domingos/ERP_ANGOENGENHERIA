@@ -87,30 +87,41 @@ class CaixaController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            $conta = Conta::where('conta', '45')->first();
             
-            if($conta){
-                $c_ = Conta::findOrFail($conta->id);
-                $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                $conta = Conta::where('conta', '45')->first();
                 
+                if($conta){
+                    $c_ = Conta::findOrFail($conta->id);
+                    $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
+                    
+                    $numero =  $subc_ + 1;
+                    
+                    $nova_conta = $c_->conta. "." . $c_->serie . "." . $numero;
+                    
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $c_->status,
+                        'conta_id' => $c_->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }else{
+                    ######################
+                    ## depois vamos dar o tratamento
+                }
+            }else {
+                
+                $cot = "45.1.";
+                $subc_ = Caixa::where('conta', 'like', $cot . "%")->where('entidade_id', $entidade->empresa->id)->count();
                 $numero =  $subc_ + 1;
                 
-                $nova_conta = $c_->conta. "." . $c_->serie . "." . $numero;
-                
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $c_->status,
-                    'conta_id' => $c_->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            }else{
-                ######################
-                ## depois vamos dar o tratamento
+                $nova_conta = $cot. "". $numero;
             }
+            
             
             $caixas = Caixa::create([
                 'nome' => $request->nome,
@@ -241,43 +252,51 @@ class CaixaController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            $conta = Conta::where('conta', '45')->first();
-            
             $caixa = Caixa::findOrFail($id);
             
-            if($caixa->code == NULL){
-                if($conta){
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                $conta = Conta::where('conta', '45')->first();
                 
-                    $c_ = Conta::findOrFail($conta->id);
-                    $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
-                    $numero =  $subc_ + 1;
-                    $nova_conta = $c_->conta. "." . $c_->serie . "." . $numero;
+                
+                if($caixa->code == NULL){
+                    if($conta){
                     
-                    $subconta = Subconta::create([
-                        'entidade_id' => $entidade->empresa->id, 
-                        'numero' => $nova_conta,
-                        'nome' => $request->nome,
-                        'tipo_conta' => 'M',
-                        'code' => $code,
-                        'status' => $c_->status,
-                        'conta_id' => $c_->id,
-                        'user_id' => Auth::user()->id,
-                    ]);
-                }else{
-                    ######################
-                    ## depois vamos dar o tratamento
+                        $c_ = Conta::findOrFail($conta->id);
+                        $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
+                        $numero =  $subc_ + 1;
+                        $nova_conta = $c_->conta. "." . $c_->serie . "." . $numero;
+                        
+                        $subconta = Subconta::create([
+                            'entidade_id' => $entidade->empresa->id, 
+                            'numero' => $nova_conta,
+                            'nome' => $request->nome,
+                            'tipo_conta' => 'M',
+                            'code' => $code,
+                            'status' => $c_->status,
+                            'conta_id' => $c_->id,
+                            'user_id' => Auth::user()->id,
+                        ]);
+                    }else{
+                        ######################
+                        ## depois vamos dar o tratamento
+                    }
+                }else {
+                    $subc_ = Subconta::where('code', $caixa->code)->where('entidade_id', $entidade->empresa->id)->first();
+                    $nova_conta = $caixa->conta;
+                    if($subc_){
+                        $subc_up = Subconta::findOrFail($subc_->id);
+                        $subc_up->numero = $nova_conta;
+                        $subc_up->code = $code;
+                        $subc_up->nome = $request->nome;
+                        $subc_up->update();
+                    }
                 }
+            
             }else {
-                $subc_ = Subconta::where('code', $caixa->code)->where('entidade_id', $entidade->empresa->id)->first();
-                $nova_conta = $caixa->conta;
-                if($subc_){
-                    $subc_up = Subconta::findOrFail($subc_->id);
-                    $subc_up->numero = $nova_conta;
-                    $subc_up->code = $code;
-                    $subc_up->nome = $request->nome;
-                    $subc_up->update();
-                }
+                $nova_conta = $caixa->conta;   
             }
+                       
+            
             
             $caixa->nome = $request->nome;
             $caixa->conta = $nova_conta;

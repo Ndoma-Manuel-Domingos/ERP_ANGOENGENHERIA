@@ -138,7 +138,7 @@
                                         <td>{{ $item->id }}</td>
                                         <td>{{ $item->nome }}</td>
                                         <td>{{ $item->status }}</td>
-                                        <td>{{ $item->subconta->numero }} - {{ $item->subconta->nome }}</td>
+                                        <td>{{ $item->subconta->numero ?? "" }} - {{ $item->subconta->nome ?? "" }}</td>
                                         <td>{{ $item->type == "D" ? $item->dispesa->nome : $item->receita->nome }}</td>
                                         <td>{{ $item->type == "D" ? ($item->fornecedor ? $item->fornecedor->nome : "") : ($item->cliente ? $item->cliente->nome : "") }}</td>
                                         <td class="text-right">{{ $item->date_at }}</td>

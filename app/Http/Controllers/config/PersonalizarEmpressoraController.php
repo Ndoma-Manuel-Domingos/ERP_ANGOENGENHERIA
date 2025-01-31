@@ -79,10 +79,13 @@ class PersonalizarEmpressoraController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!empty($request->file('logotipo'))) {
-            $image = $request->file('logotipo');
-            $imageName = time() .'.'. $image->extension();
-            $image->move(public_path('images/empresa'), $imageName);
+        if($request->hasFile('logotipo') && $request->file('logotipo')->isValid()){
+            $requestImage = $request->logotipo;
+            $extension = $requestImage->extension();
+
+            $imageName = $requestImage->getClientOriginalName() . strtotime("now") . "." . $extension;
+
+            $request->logotipo->move(public_path('images/empresa'), $imageName);
         }else{
             $imageName = $request->logotipo_guardado;
         }

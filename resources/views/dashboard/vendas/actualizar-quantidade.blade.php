@@ -58,9 +58,9 @@ $checkCaixa = App\Models\Caixa::where([
         <div class="row">
             <div class="col-lg-4 col-12 col-md-4 col-12">
                 @if ($mesa)
-                <a type="button" href="{{ route('pronto-venda-mesas-pedidos', Crypt::encrypt($mesa->id)) }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Valtar</a>
+                <a type="button" href="{{ route('pronto-venda-mesas-pedidos', Crypt::encrypt($mesa->id)) }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Voltar</a>
                 @else    
-                <a type="button" href="{{ route('pronto-venda') }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Valtar</a>
+                <a type="button" href="{{ route('pronto-venda') }}" class="btn btn-light btn-block btn-flat p-3"><i class="fas fa-arrow-left"></i> Voltar</a>
                 @endif
                 <div class="card">
                     <div class="card-body">

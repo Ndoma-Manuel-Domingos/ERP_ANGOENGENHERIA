@@ -589,7 +589,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-    
+                
         const input = document.getElementById('produto_codigo_barra_original');
         input.focus();
 
@@ -600,7 +600,7 @@
                 
                 const produtoId = input.value.trim(); 
                 let quantidade = document.getElementById("result").value;
-              
+                
                 fetch('/carrinho/adicionar-codigo-barra', {
                     method: 'POST', 
                     headers: {
@@ -617,8 +617,10 @@
                 
                     if (data.success) {
                         atualizarCarrinho(data.carrinho, data.total);
+                        
                         input.value = ''; // Limpa o campo de entrada
                         input.focus(); // Retorna o foco ao campo
+                        
                     } else {
                         alert(data.message || 'Erro ao adicionar produto.');
                     }
@@ -1072,6 +1074,9 @@
                 url: form.attr('action'), // URL do endpoint no backend
                 method: form.attr('method'), // Método HTTP definido no formulário
                 data: formData, // Dados do formulário
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();

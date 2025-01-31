@@ -77,7 +77,6 @@
                 <td style="text-align: right">{{ number_format($produto->preco * $produto->quantidade_sum_quantidade, 2, ',', '.') }}</td>
             </tr>
         @endforeach
-        
         <tr>
             <th colspan="2">Total</th>
             <th>{{ number_format($quantidade, 2, ',', '.') }}</th>

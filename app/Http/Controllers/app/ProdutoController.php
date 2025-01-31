@@ -219,6 +219,7 @@ class ProdutoController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
+      
         
         $request->validate([
             'nome' => 'required|string',
@@ -238,6 +239,8 @@ class ProdutoController extends Controller
             'tipo_stock.required' => 'O tipo de stock é um campo obrigatório',
         ]);
         
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
+       
         try {
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
@@ -246,7 +249,6 @@ class ProdutoController extends Controller
                 $request->preco_venda = $request->preco;
             }
           
-            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
     
             if($request->hasFile('imagem') && $request->file('imagem')->isValid()){
                 $requestImage = $request->imagem;
@@ -262,110 +264,131 @@ class ProdutoController extends Controller
             $code = uniqid(time());
             
             $nova_conta = "";
-                 
-            if($request->tipo == "S"){
-                // 26.1
-                $conta = Conta::where('conta', '62')->first();
-                $serie = "62.1.1";
-                
-                $qtds = 0;
-                $observacao = "Registro de serviço";
-            }else {
-                if($request->tipo_stock == "M"){
+            
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+               
+                if($request->tipo == "S"){
                     // 26.1
-                    $conta = Conta::where('conta', '26')->first();
+                    $conta = Conta::where('conta', '62')->first();
+                    $serie = "62.1.1";
+                    
+                    $qtds = 0;
+                    $observacao = "Registro de serviço";
+                }else {
+                    if($request->tipo_stock == "M"){
+                        // 26.1
+                        $conta = Conta::where('conta', '26')->first();
+                        $serie = "26.1";
+                    }
+                    
+                    if($request->tipo_stock == "P"){
+                        // 22.1
+                        $conta = Conta::where('conta', '22')->first();
+                        $serie = "22.1";
+                    }
+                    
+                    if($request->tipo_stock == "P1"){
+                        // 22.2
+                        $conta = Conta::where('conta', '22')->first();
+                        $serie = "22.2";
+                    }
+                    
+                    if($request->tipo_stock == "P2"){
+                        // 22.4
+                        $conta = Conta::where('conta', '22')->first();
+                        $serie = "22.4";
+                    }
+                    
+                    if($request->tipo_stock == "A"){
+                        $conta = Conta::where('conta', '24')->first();
+                        $serie = "24.1";
+                    }
+                    
+                    
+                    if($request->tipo_stock == "A1"){
+                        $conta = Conta::where('conta', '24')->first();
+                        $serie = "24.2";
+                    }
+                    
+                    if($request->tipo_stock == "S"){
+                        $conta = Conta::where('conta', '25')->first();
+                        $serie = "25.1";
+                    }
+                    
+                    if($request->tipo_stock == "S1"){
+                        $conta = Conta::where('conta', '25')->first();
+                        $serie = "25.2";
+                    }
+                    
+                    if($request->tipo_stock == "T"){
+                        $conta = Conta::where('conta', '23')->first();
+                        $serie = "23";
+                    }
+                    
+                    $qtds = $request->quantidade_inicial_stock ?? 0;
+                    $observacao = "Entrada de Existência";
+                }
+                
+                if($conta){
+                    
+                    $subc_ = Subconta::where('numero', 'like', $serie . "%")->where('entidade_id', $entidade->empresa->id)->count();
+                    $numero =  $subc_ + 1;
+                    
+                    $nova_conta = $serie. "." . $numero;
+                    
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                    
+                    $movimeto = Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta->id,
+                        'status' => true,
+                        'movimento' => 'E',
+                        'credito' => 0,
+                        'debito' => $request->preco_custo * $qtds,
+                        'observacao' => $observacao,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                        'exercicio_id' => 1,
+                        'periodo_id' => 12,
+                    ]);
+                    
+                }else{
+                    ## outros tratamento depois
+                }
+          
+            }else {
+          
+                if($request->tipo == "S"){
+                    $qtds = 0;
+                    $observacao = "Registro de serviço";                
+                    $serie = "62.1";
+                }else {
+                    $qtds = $request->quantidade_inicial_stock ?? 0;
+                    $observacao = "Entrada de Existência";
                     $serie = "26.1";
                 }
                 
-                if($request->tipo_stock == "P"){
-                    // 22.1
-                    $conta = Conta::where('conta', '22')->first();
-                    $serie = "22.1";
-                }
-                
-                if($request->tipo_stock == "P1"){
-                    // 22.2
-                    $conta = Conta::where('conta', '22')->first();
-                    $serie = "22.2";
-                }
-                
-                if($request->tipo_stock == "P2"){
-                    // 22.4
-                    $conta = Conta::where('conta', '22')->first();
-                    $serie = "22.4";
-                }
-                
-                if($request->tipo_stock == "A"){
-                    $conta = Conta::where('conta', '24')->first();
-                    $serie = "24.1";
-                }
-                
-                
-                if($request->tipo_stock == "A1"){
-                    $conta = Conta::where('conta', '24')->first();
-                    $serie = "24.2";
-                }
-                
-                if($request->tipo_stock == "S"){
-                    $conta = Conta::where('conta', '25')->first();
-                    $serie = "25.1";
-                }
-                
-                if($request->tipo_stock == "S1"){
-                    $conta = Conta::where('conta', '25')->first();
-                    $serie = "25.2";
-                }
-                
-                if($request->tipo_stock == "T"){
-                    $conta = Conta::where('conta', '23')->first();
-                    $serie = "23";
-                }
-                
-                $qtds = $request->quantidade_inicial_stock ?? 0;
-                $observacao = "Entrada de Existência";
-            }
-            
-            if($conta){
-                
-                $subc_ = Subconta::where('numero', 'like', $serie . "%")->where('entidade_id', $entidade->empresa->id)->count();
+                $subc_ = Produto::where('conta', 'like', $serie . "%")->where('entidade_id', $entidade->empresa->id)->count();
                 $numero =  $subc_ + 1;
                 
                 $nova_conta = $serie. "." . $numero;
-                
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-                
-                $movimeto = Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta->id,
-                    'status' => true,
-                    'movimento' => 'E',
-                    'credito' => 0,
-                    'debito' => $request->preco_custo * $qtds,
-                    'observacao' => $observacao,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                    'exercicio_id' => 1,
-                    'periodo_id' => 12,
-                ]);
-                
-            }else{
-                ## outros tratamento depois
+            
             }
     
             $motivo = Motivo::findOrFail($request->motivo_isencao ?? $entidade->empresa->motivo_id);
             
             $imposto = Imposto::findOrFail($request->imposto ?? $entidade->empresa->imposto_id);
-    
+            
             $produto = Produto::create([
                 "nome" => $request->nome,
                 "codigo_barra" => $request->codigo_barra,
@@ -393,11 +416,11 @@ class ProdutoController extends Controller
                 "tipo_stock" => $request->tipo_stock,
                 "disponibilidade" => $request->disponibilidade,
                 "status" => $request->status,          
-                "subconta_id" => $subconta->id,          
+                "subconta_id" => $subconta->id ?? 1,          
                 "user_id" => Auth::user()->id,   
                 'entidade_id' =>  $entidade->empresa->id,      
             ]);       
-    
+            
             $lojas = Loja::where([
                 ['entidade_id', '=', $entidade->empresa->id],
             ])->get();
@@ -459,7 +482,6 @@ class ProdutoController extends Controller
             if($update_estoque){
                 $update_estoque_up = Estoque::findOrFail($update_estoque->id);
                 $update_estoque_up->lote_id =  NULL;
-    
     
                 $registro = Registro::create([
                     "registro" => "Entrada de Stock",

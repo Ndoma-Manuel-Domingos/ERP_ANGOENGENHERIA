@@ -185,7 +185,7 @@
                     </tr>
                     <tr>
                         <td style="font-size: 13px">
-                            <strong>ORGINAL</strong>
+                            <strong>ORIGINAL</strong>
                         </td>
                         <td style="text-align: right;font-size: 13px;margin-top: 5px;display: block"><strong>{{ $factura->factura_next }}</strong></td>
                     </tr>
@@ -271,7 +271,7 @@
                 <table>
                     <tr>
                         <td rowspan="">
-                            <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                            <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 80px;width: 70px;">
                         </td>
                         <td style="text-align: right">
                             <span>Pág: 1/1</span> <br> <br>
@@ -324,7 +324,7 @@
                     </tr>
                                    
                     <tr>
-                        <td style="text-transform: uppercase;font-weight: bolder;font-size: 13px">ORGINAL  </td>
+                        <td style="text-transform: uppercase;font-weight: bolder;font-size: 13px">ORIGINAL  </td>
                         <td style="text-align: right;text-transform: uppercase;font-weight: bolder;font-size: 13px"><strong>{{ $factura->factura_next }}</strong></td>
                     </tr>
     

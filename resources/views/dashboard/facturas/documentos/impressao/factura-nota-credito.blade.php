@@ -115,7 +115,7 @@
                     <td style="text-align: right">
                         <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                         {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                        ORGINAL
+                        ORIGINAL
                     </td>
                 </tr>
                 <tr>
@@ -391,7 +391,7 @@
                 <td style="text-align: right">
                     <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
                     {{ date('d-m-Y', strtotime($factura->created_at))  }} <br> <br>
-                    ORGINAL
+                    ORIGINAL
                 </td>
             </tr>
             <tr>
