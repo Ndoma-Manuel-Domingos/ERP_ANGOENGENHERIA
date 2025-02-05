@@ -95,7 +95,12 @@ class FacturaEncomendaFornecedorController extends Controller
         
         $fornecedor = Fornecedore::findOrFail($encomenda->fornecedor_id);
         
-        $subconta_fornecedor = Subconta::where('code', $fornecedor->code)->first();
+        if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+            $subconta_fornecedor = Subconta::where('code', $fornecedor->code)->first();
+        }else {
+            $subconta_fornecedor = Fornecedore::where('code', $fornecedor->code)->first();
+        }
+        
         
         $code = uniqid(time());
         
@@ -119,27 +124,33 @@ class FacturaEncomendaFornecedorController extends Controller
                             return redirect()->back()->with('danger', 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!');
                         }
                         
-                        $subconta_caixa = Subconta::where('code', $request->caixa_id)->first();
-                        
-                        #VAMOS CREDITAR NO CAIXA OU SEJA VAMOS TIRAR O DINHEIRO DO CAIXA SELECIONADO
-                        $movimeto = Movimento::create([
-                            'user_id' => Auth::user()->id,
-                            'subconta_id' => $subconta_caixa->id,
-                            'status' => true,
-                            'movimento' => 'S',
-                            'credito' => $request->valor_a_pagar,
-                            'debito' => 0,
-                            'observacao' => $request->observacao,
-                            'code' => $code,
-                            'data_at' => date("Y-m-d"),
-                            'entidade_id' => $entidade->empresa->id,
-                            'exercicio_id' => 1,
-                            'periodo_id' => 12,
-                        ]);
+                        if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                            $subconta_caixa = Subconta::where('code', $request->caixa_id)->first();
+                            
+                            #VAMOS CREDITAR NO CAIXA OU SEJA VAMOS TIRAR O DINHEIRO DO CAIXA SELECIONADO
+                            $movimeto = Movimento::create([
+                                'user_id' => Auth::user()->id,
+                                'subconta_id' => $subconta_caixa->id,
+                                'status' => true,
+                                'movimento' => 'S',
+                                'credito' => $request->valor_a_pagar,
+                                'debito' => 0,
+                                'observacao' => $request->observacao,
+                                'code' => $code,
+                                'data_at' => date("Y-m-d"),
+                                'entidade_id' => $entidade->empresa->id,
+                                'exercicio_id' => 1,
+                                'periodo_id' => 12,
+                            ]);
+                        }else {
+                            //  NAO USA A CONTABILIDADE
+                            $subconta_caixa = Caixa::where('code', $request->caixa_id)->first();
+                        }
                         
                         OperacaoFinanceiro::create([
                             'nome' => "PAGAMENTO DE MERCADORIAS",
                             'status' => "pago",
+                            'formas' => "C",
                             'motante' => $request->valor_a_pagar,
                             'subconta_id' => $subconta_caixa->id,
                             'fornecedor_id' => $fornecedor->id,
@@ -163,28 +174,34 @@ class FacturaEncomendaFornecedorController extends Controller
                             return redirect()->back()->with('danger', 'Deves selecionar o banco onde será retirado o valor para o pagamento da factura!');
                         }
                         
-                        $subconta_banco = Subconta::where('code', $request->banco_id)->first();
-                        
-                        #VAMOS CREDITAR NO BANCO OU SEJA VAMOS TIRAR O DINHEIRO DO BANCO SELECIONADO
-                        
-                        $movimeto = Movimento::create([
-                            'user_id' => Auth::user()->id,
-                            'subconta_id' => $subconta_banco->id,
-                            'status' => true,
-                            'movimento' => 'S',
-                            'credito' => $request->valor_a_pagar,
-                            'debito' => 0,
-                            'observacao' => $request->observacao,
-                            'code' => $code,
-                            'data_at' => date("Y-m-d"),
-                            'entidade_id' => $entidade->empresa->id,
-                            'exercicio_id' => 1,
-                            'periodo_id' => 12,
-                        ]);
+                        if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                            $subconta_banco = Subconta::where('code', $request->banco_id)->first();
+                            
+                            #VAMOS CREDITAR NO BANCO OU SEJA VAMOS TIRAR O DINHEIRO DO BANCO SELECIONADO
+                            
+                            $movimeto = Movimento::create([
+                                'user_id' => Auth::user()->id,
+                                'subconta_id' => $subconta_banco->id,
+                                'status' => true,
+                                'movimento' => 'S',
+                                'credito' => $request->valor_a_pagar,
+                                'debito' => 0,
+                                'observacao' => $request->observacao,
+                                'code' => $code,
+                                'data_at' => date("Y-m-d"),
+                                'entidade_id' => $entidade->empresa->id,
+                                'exercicio_id' => 1,
+                                'periodo_id' => 12,
+                            ]);
+                        }else {
+                            //  NAO USA A CONTABILIDADE
+                            $subconta_banco = ContaBancaria::where('code', $request->banco_id)->first();
+                        }
                         
                         OperacaoFinanceiro::create([
                             'nome' => "PAGAMENTO DE MERCADORIAS",
                             'status' => "pago",
+                            'formas' => "B",
                             'motante' => $request->valor_a_pagar,
                             'subconta_id' => $subconta_banco->id,
                             'fornecedor_id' => $fornecedor->id,
@@ -202,25 +219,29 @@ class FacturaEncomendaFornecedorController extends Controller
                         ]);
                     }
                     
-                    ## CREDITAR FORNECEDOR
-                    $movimeto = Movimento::create([
-                        'user_id' => Auth::user()->id,
-                        'subconta_id' => $subconta_fornecedor->id,
-                        'status' => true,
-                        'movimento' => 'S',
-                        'credito' => 0,
-                        'debito' => $request->valor_a_pagar,
-                        'observacao' => $request->observacao,
-                        'code' => $code,
-                        'data_at' => date("Y-m-d"),
-                        'entidade_id' => $entidade->empresa->id,
-                        'exercicio_id' => 1,
-                        'periodo_id' => 12,
-                    ]);
+                    
+                    if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                        ## CREDITAR FORNECEDOR
+                        $movimeto = Movimento::create([
+                            'user_id' => Auth::user()->id,
+                            'subconta_id' => $subconta_fornecedor->id,
+                            'status' => true,
+                            'movimento' => 'S',
+                            'credito' => 0,
+                            'debito' => $request->valor_a_pagar,
+                            'observacao' => $request->observacao,
+                            'code' => $code,
+                            'data_at' => date("Y-m-d"),
+                            'entidade_id' => $entidade->empresa->id,
+                            'exercicio_id' => 1,
+                            'periodo_id' => 12,
+                        ]);
+                    }else {
+                        // NAO USA CONTABILIDADE
+                    }
                     
                     $encomenda->status_pagamento = true;
                     $encomenda->update();
-                    
                     
                     $status2 = "concluido";
                     $status = true;
@@ -272,6 +293,9 @@ class FacturaEncomendaFornecedorController extends Controller
                     return redirect()->back()->with('danger', 'O Valor a pagar não pode ser superior ao valor total da factura, verifica as facturas já 
                         criadas para estas encomendas, caso ainda não efectuou o pagamento das mesma factura faça-o!');
                 }
+            }else {
+            
+            
             }
             
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
@@ -535,7 +559,9 @@ class FacturaEncomendaFornecedorController extends Controller
 
 
     public function liquidarFacturaCompraStore(Request $request)
-    {        
+    {    
+        
+      
         $request->validate([
             'valor_liquidar' => 'required',
             'factura_id' => 'required',
@@ -563,6 +589,11 @@ class FacturaEncomendaFornecedorController extends Controller
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
             
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+            }else {
+                //  NAO USA A CONTABILIDADE
+            }
+            
             if($request->forma_pagamento_id == ""){
                 return redirect()->back()->with('danger', 'Deves selecionar uma forma de pagamento da factura!');
             }
@@ -572,31 +603,37 @@ class FacturaEncomendaFornecedorController extends Controller
                     return redirect()->back()->with('danger', 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!');
                 }
                 
-                $subconta_caixa = Subconta::where('code', $request->caixa_id)->first();
-                
-                #VAMOS CREDITAR NO CAIXA OU SEJA VAMOS TIRAR O DINHEIRO DO CAIXA SELECIONADO
-                $movimeto = Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta_caixa->id,
-                    'status' => true,
-                    'movimento' => 'S',
-                    'credito' => $request->valor_liquidar,
-                    'debito' => 0,
-                    'observacao' => $request->observacao,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                    'exercicio_id' => 1,
-                    'periodo_id' => 12,
-                ]);
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                    
+                    $subconta_caixa = Subconta::where('code', $request->caixa_id)->first();
+                    
+                    #VAMOS CREDITAR NO CAIXA OU SEJA VAMOS TIRAR O DINHEIRO DO CAIXA SELECIONADO
+                    $movimeto = Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta_caixa->id,
+                        'status' => true,
+                        'movimento' => 'S',
+                        'credito' => $request->valor_liquidar,
+                        'debito' => 0,
+                        'observacao' => $request->observacao,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                        'exercicio_id' => 1,
+                        'periodo_id' => 12,
+                    ]);
+                }else {
+                    $subconta_caixa = Caixa::where('code', $request->caixa_id)->first();
+                }
                 
                 OperacaoFinanceiro::create([
                     'nome' => "PAGAMENTO DE MERCADORIAS",
                     'status' => "pago",
+                    'formas' => "C",
                     'motante' => $request->valor_liquidar,
                     'subconta_id' => $subconta_caixa->id,
                     'fornecedor_id' => $fornecedor->id,
-                    'model_id' => 14,
+                    'model_id' => 1,
                     'type' => "D",
                     'parcelado' => "N",
                     'status_pagamento' => "pago",
@@ -616,32 +653,40 @@ class FacturaEncomendaFornecedorController extends Controller
                     return redirect()->back()->with('danger', 'Deves selecionar o banco onde será retirado o valor para o pagamento da factura!');
                 }
                 
-                $subconta_banco = Subconta::where('code', $request->banco_id)->first();
-                
-                #VAMOS CREDITAR NO BANCO OU SEJA VAMOS TIRAR O DINHEIRO DO BANCO SELECIONADO
                             
-                $movimeto = Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta_banco->id,
-                    'status' => true,
-                    'movimento' => 'S',
-                    'credito' => $request->valor_liquidar,
-                    'debito' => 0,
-                    'observacao' => $request->observacao,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                    'exercicio_id' => 1,
-                    'periodo_id' => 12,
-                ]);
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                    $subconta_banco = Subconta::where('code', $request->banco_id)->first();
+                    
+                    #VAMOS CREDITAR NO BANCO OU SEJA VAMOS TIRAR O DINHEIRO DO BANCO SELECIONADO
+                                
+                    $movimeto = Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta_banco->id,
+                        'status' => true,
+                        'movimento' => 'S',
+                        'credito' => $request->valor_liquidar,
+                        'debito' => 0,
+                        'observacao' => $request->observacao,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                        'exercicio_id' => 1,
+                        'periodo_id' => 12,
+                    ]);
+                    
+                }else {
+                    //  NAO USA A CONTABILIDADE
+                    $subconta_banco = ContaBancaria::where('code', $request->banco_id)->first();
+                }
                 
                 OperacaoFinanceiro::create([
                     'nome' => "PAGAMENTO DE MERCADORIAS",
                     'status' => "pago",
+                    'formas' => "B",
                     'motante' => $request->valor_liquidar,
                     'subconta_id' => $subconta_banco->id,
                     'fornecedor_id' => $fornecedor->id,
-                    'model_id' => 14,
+                    'model_id' => 1,
                     'type' => "D",
                     'parcelado' => "N",
                     'status_pagamento' => "pago",
@@ -656,22 +701,30 @@ class FacturaEncomendaFornecedorController extends Controller
                 
             }
               
-            ## CREDITAR FORNECEDOR
-            $movimeto = Movimento::create([
-                'user_id' => Auth::user()->id,
-                'subconta_id' => $subconta_fornecedor->id,
-                'status' => true,
-                'movimento' => 'S',
-                'credito' => 0,
-                'debito' => $request->valor_liquidar,
-                'observacao' => $request->observacao,
-                'code' => $code,
-                'data_at' => date("Y-m-d"),
-                'entidade_id' => $entidade->empresa->id,
-                'exercicio_id' => 1,
-                'periodo_id' => 12,
-            ]);
-    
+              
+                        
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                ## CREDITAR FORNECEDOR
+                $movimeto = Movimento::create([
+                    'user_id' => Auth::user()->id,
+                    'subconta_id' => $subconta_fornecedor->id,
+                    'status' => true,
+                    'movimento' => 'S',
+                    'credito' => 0,
+                    'debito' => $request->valor_liquidar,
+                    'observacao' => $request->observacao,
+                    'code' => $code,
+                    'data_at' => date("Y-m-d"),
+                    'entidade_id' => $entidade->empresa->id,
+                    'exercicio_id' => 1,
+                    'periodo_id' => 12,
+                ]);
+        
+            }else {
+                //  NAO USA A CONTABILIDADE
+            }
+              
+            
             
             if(($request->valor_liquidar + $factura->valor_pago) > $factura->valor_factura){
                 $status2 = "concluido";

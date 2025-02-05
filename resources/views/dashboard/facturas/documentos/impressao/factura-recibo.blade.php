@@ -141,7 +141,7 @@
                         <strong>Telefone: </strong> {{ $loja->empresa->telefone }}
                     </td>
                     <td style="border-left: #eaeaea 1px solid; padding: 2px">
-                        <strong>NIF:</strong> CONSUMIDOR FINAL {{-- $factura->cliente->nif ?? '99999999999' --}}
+                        <strong>NIF:</strong> {{ $factura->cliente->nif ?? '99999999999' }}
                     </td>
                 </tr>
 
@@ -387,7 +387,7 @@
                 </tr>
                 <tr>
                     <td style="text-transform: uppercase;font-weight: bolder"> {{ $loja->empresa->telefone }} </td>
-                    <td style="border-left: #eaeaea 1px solid; padding: 2px;font-weight: bolder"> NIF: CONSUMIDOR FINAL </td>
+                    <td style="border-left: #eaeaea 1px solid; padding: 2px;font-weight: bolder"> NIF: {{ $factura->cliente->nif ?? "CONSUMIDOR FINAL " }} </td>
                 </tr>
 
                 <tr>

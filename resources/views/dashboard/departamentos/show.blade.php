@@ -77,14 +77,11 @@
               <a href="{{ route('departamentos.edit', $departamento->id) }}" class="btn btn-sm btn-success mx-1">
                 <i class="fas fa-edit"></i>
               </a>
-              <form action="{{ route('departamentos.destroy', $departamento->id ) }}" method="post">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-sm btn-danger mx-1"
-                  onclick="return confirm('Tens Certeza que Desejas excluir esta departamento?')">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </form>
+              
+              <button class="btn btn-sm btn-danger mx-1 delete-record" data-id="{{ $departamento->id }}">
+                <i class="fas fa-trash"></i> Eliminar
+              </button>
+
             </div>
             @endif
 
@@ -99,4 +96,54 @@
 </div>
 <!-- /.content-wrapper -->
 
+@endsection
+
+
+@section('scripts')
+<script>
+    $(document).on('click', '.delete-record', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+
+        // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
+
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, excluir!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('departamentos.destroy', ':id') }}`.replace(':id', recordId)
+                    , method: 'DELETE'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
+    });
+
+</script>
 @endsection

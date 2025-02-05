@@ -129,7 +129,6 @@ class EncomendaForncedorController extends Controller
      */
     public function store(Request $request)
     {   
-
         $request->validate(
             [
                 'data_previsao' => 'required',
@@ -207,46 +206,16 @@ class EncomendaForncedorController extends Controller
                 $update->loja_id = $request->loja_id;
                 
                 ##COMPRA A PRAZO
-
-                $subconta_mercadoria = Subconta::where('code', $produto->code)->first();
                 
-                if($subconta_compra_mercadoria && $subconta_fornecedor && $subconta_iva)
-                {
-                    #DEBITAMOS O 21
-                    $movimeto = Movimento::create([
-                        'user_id' => Auth::user()->id,
-                        'subconta_id' => $subconta_compra_mercadoria->id,
-                        'status' => true,
-                        'movimento' => 'E',
-                        'credito' => 0,
-                        'debito' => $totalSemIva,
-                        'observacao' => $request->observacao,
-                        'code' => $code,
-                        'data_at' => date("Y-m-d"),
-                        'entidade_id' => $entidade->empresa->id,
-                        'exercicio_id' => 1,
-                        'periodo_id' => 12,
-                    ]);
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                    $subconta_mercadoria = Subconta::where('code', $produto->code)->first();
                     
-                    if($entidade->empresa->tipo_inventario == "PERMANENTE"){
+                    if($subconta_compra_mercadoria && $subconta_fornecedor && $subconta_iva)
+                    {
+                        #DEBITAMOS O 21
                         $movimeto = Movimento::create([
                             'user_id' => Auth::user()->id,
                             'subconta_id' => $subconta_compra_mercadoria->id,
-                            'status' => true,
-                            'movimento' => 'E',
-                            'credito' => $totalSemIva,
-                            'debito' => 0,
-                            'observacao' => $request->observacao,
-                            'code' => $code,
-                            'data_at' => date("Y-m-d"),
-                            'entidade_id' => $entidade->empresa->id,
-                            'exercicio_id' => 1,
-                            'periodo_id' => 12,
-                        ]);
-                        
-                        $movimeto = Movimento::create([
-                            'user_id' => Auth::user()->id,
-                            'subconta_id' => $subconta_mercadoria->id,
                             'status' => true,
                             'movimento' => 'E',
                             'credito' => 0,
@@ -258,83 +227,86 @@ class EncomendaForncedorController extends Controller
                             'exercicio_id' => 1,
                             'periodo_id' => 12,
                         ]);
+                        
+                        if($entidade->empresa->tipo_inventario == "PERMANENTE"){
+                            $movimeto = Movimento::create([
+                                'user_id' => Auth::user()->id,
+                                'subconta_id' => $subconta_compra_mercadoria->id,
+                                'status' => true,
+                                'movimento' => 'E',
+                                'credito' => $totalSemIva,
+                                'debito' => 0,
+                                'observacao' => $request->observacao,
+                                'code' => $code,
+                                'data_at' => date("Y-m-d"),
+                                'entidade_id' => $entidade->empresa->id,
+                                'exercicio_id' => 1,
+                                'periodo_id' => 12,
+                            ]);
+                            
+                            $movimeto = Movimento::create([
+                                'user_id' => Auth::user()->id,
+                                'subconta_id' => $subconta_mercadoria->id,
+                                'status' => true,
+                                'movimento' => 'E',
+                                'credito' => 0,
+                                'debito' => $totalSemIva,
+                                'observacao' => $request->observacao,
+                                'code' => $code,
+                                'data_at' => date("Y-m-d"),
+                                'entidade_id' => $entidade->empresa->id,
+                                'exercicio_id' => 1,
+                                'periodo_id' => 12,
+                            ]);
+                        }
+                    
+                        ##DEBITAMOS 34.5.2.....
+                        $movimeto = Movimento::create([
+                            'user_id' => Auth::user()->id,
+                            'subconta_id' => $subconta_iva->id,
+                            'status' => true,
+                            'movimento' => 'E',
+                            'credito' => 0,
+                            'debito' => $valorIVa,
+                            'observacao' => $request->observacao,
+                            'code' => $code,
+                            'data_at' => date("Y-m-d"),
+                            'entidade_id' => $entidade->empresa->id,
+                            'exercicio_id' => 1,
+                            'periodo_id' => 12,
+                        ]);
+                    
+                        ## CREDITAMOS FORNECEDOR
+                        $movimeto = Movimento::create([
+                            'user_id' => Auth::user()->id,
+                            'subconta_id' => $subconta_fornecedor->id,
+                            'status' => true,
+                            'movimento' => 'E',
+                            'credito' => $totalComIva,
+                            'debito' => 0,
+                            'observacao' => $request->observacao,
+                            'code' => $code,
+                            'data_at' => date("Y-m-d"),
+                            'entidade_id' => $entidade->empresa->id,
+                            'exercicio_id' => 1,
+                            'periodo_id' => 12,
+                        ]);
                     }
-                
-                    ##DEBITAMOS 34.5.2.....
-                    $movimeto = Movimento::create([
-                        'user_id' => Auth::user()->id,
-                        'subconta_id' => $subconta_iva->id,
-                        'status' => true,
-                        'movimento' => 'E',
-                        'credito' => 0,
-                        'debito' => $valorIVa,
-                        'observacao' => $request->observacao,
-                        'code' => $code,
-                        'data_at' => date("Y-m-d"),
-                        'entidade_id' => $entidade->empresa->id,
-                        'exercicio_id' => 1,
-                        'periodo_id' => 12,
-                    ]);
-                
-                    ## CREDITAMOS FORNECEDOR
-                    $movimeto = Movimento::create([
-                        'user_id' => Auth::user()->id,
-                        'subconta_id' => $subconta_fornecedor->id,
-                        'status' => true,
-                        'movimento' => 'E',
-                        'credito' => $totalComIva,
-                        'debito' => 0,
-                        'observacao' => $request->observacao,
-                        'code' => $code,
-                        'data_at' => date("Y-m-d"),
-                        'entidade_id' => $entidade->empresa->id,
-                        'exercicio_id' => 1,
-                        'periodo_id' => 12,
-                    ]);
+                }else {
+                    //  NAO USA A CONTABILIDADE
                 }
-           
+
                 $update->update();
             }        
             
             ## OUTRA PARTE DOS CUSTOS - START
             $outros_custos = $request->custo_transporte + $request->custo_manuseamento + $request->outros_custos;
-    
-            ## CREDITAMOS FORNECEDOR
-            $movimeto = Movimento::create([
-                'user_id' => Auth::user()->id,
-                'subconta_id' => $subconta_fornecedor->id,
-                'status' => true,
-                'movimento' => 'E',
-                'credito' => $outros_custos,
-                'debito' => 0,
-                'observacao' => $request->observacao,
-                'code' => $code,
-                'data_at' => date("Y-m-d"),
-                'entidade_id' => $entidade->empresa->id,
-                'exercicio_id' => 1,
-                'periodo_id' => 12,
-            ]);
             
-            #DEBITAMOS O 21
-            $movimeto = Movimento::create([
-                'user_id' => Auth::user()->id,
-                'subconta_id' => $subconta_compra_mercadoria->id,
-                'status' => true,
-                'movimento' => 'E',
-                'credito' => 0,
-                'debito' => $outros_custos,
-                'observacao' => $request->observacao,
-                'code' => $code,
-                'data_at' => date("Y-m-d"),
-                'entidade_id' => $entidade->empresa->id,
-                'exercicio_id' => 1,
-                'periodo_id' => 12,
-            ]);
-            
-            if($entidade->empresa->tipo_inventario == "PERMANENTE"){
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                ## CREDITAMOS FORNECEDOR
                 $movimeto = Movimento::create([
                     'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta_compra_mercadoria->id,
+                    'subconta_id' => $subconta_fornecedor->id,
                     'status' => true,
                     'movimento' => 'E',
                     'credito' => $outros_custos,
@@ -346,7 +318,43 @@ class EncomendaForncedorController extends Controller
                     'exercicio_id' => 1,
                     'periodo_id' => 12,
                 ]);
+                
+                #DEBITAMOS O 21
+                $movimeto = Movimento::create([
+                    'user_id' => Auth::user()->id,
+                    'subconta_id' => $subconta_compra_mercadoria->id,
+                    'status' => true,
+                    'movimento' => 'E',
+                    'credito' => 0,
+                    'debito' => $outros_custos,
+                    'observacao' => $request->observacao,
+                    'code' => $code,
+                    'data_at' => date("Y-m-d"),
+                    'entidade_id' => $entidade->empresa->id,
+                    'exercicio_id' => 1,
+                    'periodo_id' => 12,
+                ]);
+                
+                if($entidade->empresa->tipo_inventario == "PERMANENTE"){
+                    $movimeto = Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta_compra_mercadoria->id,
+                        'status' => true,
+                        'movimento' => 'E',
+                        'credito' => $outros_custos,
+                        'debito' => 0,
+                        'observacao' => $request->observacao,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                        'exercicio_id' => 1,
+                        'periodo_id' => 12,
+                    ]);
+                }
+            }else {
+                //  NAO USA A CONTABILIDADE
             }
+            
                         
             ##END CUSTO
         

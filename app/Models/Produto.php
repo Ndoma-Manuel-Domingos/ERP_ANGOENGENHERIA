@@ -95,7 +95,11 @@ class Produto extends Model
 
     public function estoque()
     {
-        return $this->hasOne(Estoque::class, 'produto_id', 'id');
+        $result = $this->hasOne(Estoque::class, 'produto_id', 'id')->with(['loja' => function($query) {
+            $query->where('status', 'activo');
+        }]);
+        
+        return $result;
     }
 
     public function estoques()
@@ -162,11 +166,40 @@ class Produto extends Model
         }
     }
 
-    public function total_produto($id)
+    public function total_produto_loja_activa()
     {
-        $totalStock = Estoque::where([
-            ['produto_id', $id],
-        ])->sum('stock');
+        $user = auth()->user();
+
+        return Estoque::with(['loja' => function($query) {
+            $query->where('status', 'activo');
+            }
+        ])
+        ->where('produto_id', $this->id)
+        ->where('entidade_id', $user->entidade_id)
+        ->sum('stock');
+    }
+
+    public function total_produto_minimo_loja_activa()
+    {
+        $user = auth()->user();
+
+        return Estoque::with(['loja' => function($query) {
+            $query->where('status', 'activo');
+            }
+        ])
+        ->where('produto_id', $this->id)
+        ->where('entidade_id', $user->entidade_id)
+        ->sum('stock_minimo');
+    }
+
+
+    public function total_produto($id = null)
+    {
+        $user = auth()->user();
+        
+        $totalStock = Estoque::where('entidade_id', $user->entidade_id)
+        ->where('produto_id', $this->id)
+        ->sum('stock');
 
         return $totalStock;
     }

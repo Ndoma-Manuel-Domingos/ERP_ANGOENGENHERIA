@@ -27,8 +27,109 @@
         <tr>
             <th colspan="10" style="text-transform: uppercase"> {{ $titulo }}</th>
         </tr>
+        <tr>
+            <th colspan="8" style="text-transform: uppercase">REFERÊNCIA: {{ $operacao->nome }}</th>
+            <th colspan="2" style="text-transform: uppercase;text-align: right">DATA: {{ $operacao->date_at }}</th>
+        </tr>
     </thead>
 </table>
+
+@if ($entidade->empresa->tem_permissao("Gestão Contabilidade"))
+<table>
+    <tbody>
+        <tr>
+            <td></td>
+        </tr>
+    </tbody>
+</table>
+@else
+<table>
+    <thead>
+        <tr>
+            <th style="text-align: left">Fornecedor</th>
+            <th style="text-align: left">Cliente</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="text-align: left">{{ $operacao->fornecedor->nome ?? "-" }}</td>
+            <td style="text-align: left">{{ $operacao->cliente->nome ?? "-" }}</td>
+        </tr>
+    </tbody>
+    
+    {{-- --------------------------------------------- --}}
+    <thead>
+        <tr>
+            <th style="text-align: left" colspan="2">REFERENTE</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            @if ($operacao->dispesa)
+                <td style="text-align: left" colspan="2">{{ $operacao->dispesa->nome ?? "" }}</td>
+            @else
+                @if ($operacao->receita)
+                <td style="text-align: left" colspan="2">{{ $operacao->receita->nome ?? "" }}</td>
+                @endif
+            @endif
+        </tr>
+    </tbody>
+    
+    {{-- ------------------------------------------ --}}
+    <thead>
+        <tr>
+            <th style="text-align: left" colspan="2">Descrição</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="text-align: left" colspan="2">{{ $operacao->descricao ?? "-" }}</td>
+        </tr>
+    </tbody>
+    {{-- ------------------------------------------ --}}
+    <thead>
+        <tr>
+            <th style="text-align: left">Forma de Entrada/Saída</th>
+            <th style="text-align: right">Motante Entrada/Saída</th>
+        </tr>
+    </thead>
+    <tbody>
+        @php
+            $total = 0;
+        @endphp
+        @foreach ($itemOperacoes as $item)
+            @php
+                $total += $item->motante;
+            @endphp
+            <tr>
+                @if ($item->contabancaria)
+                <td>{{ $item->contabancaria->conta ?? "" }} - {{ $item->contabancaria->nome ?? "" }}</td>
+                @else
+                    @if ($item->caixa)
+                    <td>{{ $item->caixa->conta ?? "" }} - {{ $item->caixa->nome ?? "" }}</td>
+                    @endif
+                @endif
+                <td style="text-align: right">{{ number_format($item->motante ?? 0, 2, ',', '.') }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+
+<table>
+    <thead>
+        <tr>
+            <th style="text-align: right">Total Motante</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="text-align: right">{{ number_format($total ?? 0, 2, ',', '.') }}</td>
+        </tr>
+    </tbody>
+</table>
+@endif
+
+
 {{-- 
 <table>
     <thead>

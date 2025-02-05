@@ -132,7 +132,7 @@
                 <table>
                     <tr>
                         <td rowspan="">
-                            <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                            <img src="{{ public_path("images/empresa/".$loja->empresa->logotipo) }}" alt="" style="text-align: center;height: 80px;width: 70px;">
                         </td>
                         <td style="text-align: right">
                             <span style="margin-bottom: 50px">Pág: 1/1</span> <br> <br>
@@ -204,9 +204,6 @@
                     </tr>
                     <tr>
                         <td style="font-size: 13px;text-transform: uppercase">Forma de Pagamento: {{ $factura->pagamento == 'NU' ? 'NUMERÁRIO' : ($factura->pagamento == 'OU' ? 'DUPLO' :'MULTICAIXA' )  }}</td>
-                    </tr>
-                    <tr>
-                        <th style="font-size: 13px;text-transform: uppercase">Cliente: {{ $factura->nome_cliente ?? "CONSUMIDOR FINAL" }} - NIF: {{ $factura->documento_nif ?? "999999999" }}</th>
                     </tr>
                 </table>
                 @php

@@ -124,7 +124,13 @@
                                         <th>#</th>
                                         <th>Referência</th>
                                         <th>Estado</th>
+                                        
+                                        @if ($tipo_entidade_logado->empresa->tem_permissao("Gestão Contabilidade"))
                                         <th>Subconta</th>
+                                        @else
+                                        <th>Caixa/Conta Bancária</th>
+                                        @endif
+                                        
                                         <th>Dispesa/Receita</th>
                                         <th>Fornecedor/Cliente</th>
                                         <th class="text-right">Data</th>
@@ -138,7 +144,21 @@
                                         <td>{{ $item->id }}</td>
                                         <td>{{ $item->nome }}</td>
                                         <td>{{ $item->status }}</td>
+                                        
+                                        @if ($tipo_entidade_logado->empresa->tem_permissao("Gestão Contabilidade"))
                                         <td>{{ $item->subconta->numero ?? "" }} - {{ $item->subconta->nome ?? "" }}</td>
+                                        @else
+                                            @if ($item->formas == "C")
+                                            <td>{{ $item->caixa->conta ?? "" }} - {{ $item->caixa->nome ?? "" }}</td>
+                                            @else    
+                                                @if ($item->formas == "B")
+                                                <td>{{ $item->contabancaria->conta ?? "" }} - {{ $item->contabancaria->nome ?? "" }}</td>
+                                                @else
+                                                    <td>Outras</td>
+                                                @endif
+                                            @endif
+                                        @endif
+                                        
                                         <td>{{ $item->type == "D" ? $item->dispesa->nome : $item->receita->nome }}</td>
                                         <td>{{ $item->type == "D" ? ($item->fornecedor ? $item->fornecedor->nome : "") : ($item->cliente ? $item->cliente->nome : "") }}</td>
                                         <td class="text-right">{{ $item->date_at }}</td>
@@ -168,13 +188,9 @@
                                                 
                                                 <div class="dropdown-divider"></div>
                                                 @if (Auth::user()->can('eliminar dispesa'))
-                                                <form action="{{ route('operacaoes-financeiras.destroy', $item->id ) }}" method="post">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger dropdown-item" onclick="return confirm('Tens Certeza que Desejas excluir esta dispesa?')">
-                                                        <i class="fas fa-trash text-danger"></i> Eliminar
-                                                    </button>
-                                                </form>
+                                                <button class="btn btn-sm btn-danger dropdown-item delete-record" data-id="{{ $item->id }}">
+                                                    <i class="fas fa-trash text-danger"></i> Eliminar
+                                                </button>
                                                 @endif
                                             </div>
                                         </td>
@@ -201,6 +217,48 @@
 
 @section('scripts')
   <script>
+    
+    $(document).on('click', '.delete-record', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, excluir!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('operacaoes-financeiras.destroy', ':id') }}`.replace(':id', recordId)
+                    , method: 'DELETE'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
+    });
+  
     $(function() {
       $("#carregar_tabela").DataTable({
         language: {

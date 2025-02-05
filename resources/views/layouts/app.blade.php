@@ -277,7 +277,6 @@
             @endif
         });
     </script>
-    
 
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}" defer></script>
@@ -323,8 +322,8 @@
     
     <script src="{{ asset('assets/js/chart-.js') }}"></script>
 
-    <script>        
-    
+    <script>  
+
         function progressBeforeSend(title = "Processando...", text = "Por favor, aguarde.", icon = 'info' ) {
             Swal.fire({
               title: title,
@@ -361,8 +360,8 @@
             modal.style.display = "none";
             modal.style.zIndex = "-1"; // Corrigido: zIndex ao invés de z-index
         }
-        
-        
+
+                    
         $(function () {
             //Initialize Select2 Elements
             $('.select2').select2()
@@ -373,9 +372,9 @@
             })
         });
 
-    </script>
     
-    @include('sweetalert::alert')
+
+    </script>
 </body>
 </html>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\app;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TraitHelpers;
 use App\Models\ContaBancaria;
 use App\Models\Caixa;
 use App\Models\Cliente;
@@ -23,6 +24,8 @@ use PDF;
 
 class OperacaoFinanceiraController extends Controller
 {
+    use TraitHelpers;
+    
     /**
      * Display a listing of the resource.
      *
@@ -54,10 +57,10 @@ class OperacaoFinanceiraController extends Controller
         })
         ->where('entidade_id', '=', $entidade->empresa->id)
         ->whereIn('type', ['R', 'D'])
-        ->with(['fornecedor', 'cliente', 'dispesa', 'receita', 'subconta'])
+        ->with(['fornecedor', 'cliente', 'dispesa', 'caixa', 'contabancaria', 'receita', 'subconta'])
         ->orderBy('created_at', 'desc')
         ->get();
-            
+        
 
         $head = [
             "titulo" => "Operações Financeiras",
@@ -100,7 +103,7 @@ class OperacaoFinanceiraController extends Controller
         })
         ->where('entidade_id', '=', $entidade->empresa->id)
         ->whereIn('type', ['R', 'D'])
-        ->with(['fornecedor', 'forma_recebimento', 'forma_pagamento', 'cliente', 'dispesa', 'receita'])
+        ->with(['subconta', 'fornecedor','cliente','dispesa', 'caixa','contabancaria','receita','user' ,'entidade'])
         ->orderBy('created_at', 'desc')
         ->onlyTrashed()
         ->get();
@@ -142,7 +145,7 @@ class OperacaoFinanceiraController extends Controller
         })
         ->where('entidade_id', '=', $entidade->empresa->id)
         ->whereIn('type', ['R', 'D'])
-        ->with(['fornecedor', 'forma_recebimento', 'forma_pagamento', 'cliente', 'dispesa', 'receita'])
+        ->with(['subconta', 'fornecedor','cliente','dispesa', 'caixa','contabancaria','receita','user' ,'entidade'])
         ->orderBy('created_at', 'desc')
         ->get();
  
@@ -301,9 +304,8 @@ class OperacaoFinanceiraController extends Controller
      */
     public function store(Request $request)
     {
-       
         $user = auth()->user();
-        
+       
         if(!$user->can('operacao financeira')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
@@ -311,169 +313,395 @@ class OperacaoFinanceiraController extends Controller
         
         $request->validate([
             'tipo_id' => 'required|string',
-            'motante' => 'required|string',
+            'referencia' => 'required|string',
             'tipo_servico_id' => 'required|string',
         ],[
             'tipo_id.required' => 'O tipo é um campo obrigatório',
-            'motante.required' => 'O motante é um campo obrigatório',
+            'referencia.required' => 'A designação é um campo obrigatório',
             'tipo_servico_id.required' => 'O tipo de serviço é um campo obrigatório',
         ]);
-
+        
+         
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
+        
+        $motante1 = 0;
+        $motante2 = 0;
+        
+        $caixaActivo = Caixa::where([
+            ['active', true],
+            ['status', '=', 'aberto'],
+            ['user_id', '=', Auth::user()->id],
+            ['entidade_id', '=', $entidade->empresa->id], 
+        ])->first();
+        
+        
+        if($request->tipo_servico_id === "receita"){
+            $request->validate([
+                'forma_recebimento_id' => 'required|string',
+                'data_recebimento' => 'required|string',
+            ],[
+                'forma_recebimento_id.required' => 'A forma de recebimento é um campo obrigatório',
+                'data_recebimento.required' => 'A data do recebimento é um campo obrigatório',
+            ]);
+            
+            $forma = TipoPagamento::findOrFail($request->forma_recebimento_id);
+            
+            if($forma->tipo === "NU"){
+                $request->validate([
+                    'caixa_id' => 'required|string',
+                    'motante' => 'required|string',
+                ],[
+                    'caixa_id.required' => 'O caixa é um campo obrigatório',
+                    'motante.required' => 'O motante do caixa é um campo obrigatório',
+                ]);
+                
+                $motante1 = $request->motante ?? 0;
+            }
+            
+            if($forma->tipo === "MB" || $forma->tipo === "DE" || $forma->tipo === "TE"){
+                $request->validate([
+                    'banco_id' => 'required|string',
+                    'motante_banco' => 'required|string',
+                ],[
+                    'banco_id.required' => 'A conta bancária é um campo obrigatório',
+                    'motante_banco.required' => 'O motante da conta bancária é um campo obrigatório',
+                ]);
+                
+                $motante2 = $request->motante_banco ?? 0;
+            }
+            
+            if($forma->tipo === "OU"){
+                $request->validate([
+                    'caixa_id' => 'required|string',
+                    'banco_id' => 'required|string',
+                    'motante' => 'required|string',
+                    'motante_banco' => 'required|string',
+                ],[
+                    'caixa_id.required' => 'O caixa é um campo obrigatório',
+                    'banco_id.required' => 'A conta bancária é um campo obrigatório',
+                    'motante.required' => 'O motante do caixa é um campo obrigatório',
+                    'motante_banco.required' => 'O motante da conta bancária é um campo obrigatório',
+                ]);
+                
+                $motante1 = $request->motante ?? 0;
+                $motante2 = $request->motante_banco ?? 0;
+            }
+            
+            $data_at = $request->data_recebimento;
+            $motante = $motante1 + $motante2;
+            
+        }else 
+        {
+            $request->validate([
+                'forma_pagamento_id' => 'required|string',
+                'data_pagamento' => 'required|string',
+            ],[
+                'forma_pagamento_id.required' => 'A forma de pagamento é um campo obrigatório',
+                'data_pagamento.required' => 'A data do pagamento é um campo obrigatório',
+            ]);
+            
+            $forma = TipoPagamento::findOrFail($request->forma_pagamento_id);
+            
+            if($forma->tipo === "NU"){
+                $request->validate([
+                    'caixa_id' => 'required|string',
+                    'motante' => 'required|string',
+                ],[
+                    'caixa_id.required' => 'O caixa é um campo obrigatório',
+                    'motante.required' => 'O motante do caixa é um campo obrigatório',
+                ]);
+                
+                $motante1 = $request->motante ?? 0;
+            }
+            
+            if($forma->tipo === "MB" || $forma->tipo === "DE" || $forma->tipo === "TE"){
+                $request->validate([
+                    'banco_id' => 'required|string',
+                    'motante_banco' => 'required|string',
+                ],[
+                    'banco_id.required' => 'A conta bancária é um campo obrigatório',
+                    'motante_banco.required' => 'O motante da conta bancária é um campo obrigatório',
+                ]);
+                
+                $motante2 = $request->motante_banco ?? 0;
+            }
+            
+            if($forma->tipo === "OU"){
+                $request->validate([
+                    'caixa_id' => 'required|string',
+                    'banco_id' => 'required|string',
+                    'motante' => 'required|string',
+                    'motante_banco' => 'required|string',
+                ],[
+                    'caixa_id.required' => 'O caixa é um campo obrigatório',
+                    'banco_id.required' => 'A conta bancária é um campo obrigatório',
+                    'motante.required' => 'O motante do caixa é um campo obrigatório',
+                    'motante_banco.required' => 'O motante da conta bancária é um campo obrigatório',
+                ]);
+                
+                $motante1 = $request->motante ?? 0;
+                $motante2 = $request->motante_banco ?? 0;
+            }
+            
+            $data_at = $request->data_pagamento;
+            $motante = $motante1 + $motante2;
+        }
+        
         try {
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
-            
-            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+           
             $code = uniqid(time());
             $formaPagamento = TipoPagamento::findOrFail($request->forma_pagamento_id ?? $request->forma_recebimento_id);
            
             if($formaPagamento->tipo == "NU"){
-                
-                $conta = Caixa::find($request->caixa_id);
-                if($conta){
-                    $subconta = Subconta::where('code', $conta->code)->first();
-                    if($subconta){
-                        $operacoes = OperacaoFinanceiro::create([
-                            'nome' => $request->referencia,
-                            'status' => $request->status_pagamento,
-                            'motante' => $request->motante,
-                            'subconta_id' => $subconta->id,
-                            'cliente_id' => $request->cliente_id,
-                            'fornecedor_id' => $request->fornecedor_id,
-                            'model_id' => $request->tipo_id,
-                            'type' => $request->tipo_servico_id == "receita" ? "R" : "D",
-                            'status_pagamento' => $request->status_pagamento,
-                            'parcelado' => $request->parcelado,
-                            'parcelas' => $request->parcelas,
-                            'data_recebimento' => $request->data_recebimento,
-                            'data_pagamento' => $request->data_pagamento,
-                            'forma_recebimento_id' => $request->forma_recebimento_id,
-                            'forma_pagamento_id' => $request->forma_pagamento_id,
-                            'code' => $code,
-                            'descricao' => $request->descricao,
-                            'movimento' =>  $request->tipo_servico_id == "receita" ? "E" : "S",
-                            'date_at' => $request->data_pagamento ?? $request->data_recebimento,
-                            'user_id' => Auth::user()->id,
-                            'entidade_id' => $entidade->empresa->id,
-                        ]);
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                    $conta = Caixa::find($request->caixa_id);
+                    
+                    if($conta){
+                        $subconta = Subconta::where('code', $conta->code)->first();
+                        if($subconta){
+                        
+                            $this->registra_operacoes(  
+                                $request->motante,
+                                $subconta->id,
+                                $request->cliente_id,
+                                $request->tipo_servico_id == "receita" ? "R" : "D",
+                                $request->status_pagamento,
+                                $code,
+                                $request->tipo_servico_id == "receita" ? "E" : "S",
+                                $data_at,
+                                $entidade->empresa->id,
+                                $request->referencia,
+                                Auth::user()->id,
+                                $caixaActivo ? 'pendente' : 'concluido', 
+                                'C', 
+                                $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                                $request->tipo_id,
+                                $request->parcelado,
+                                $request->parcelas,
+                                $request->fornecedor_id
+                            );
+                            
+                        }else{
+                            return response()->json(['message' => "Por favor, verificar se esta caixa foi criado ou cadastrado correctamente, para qualquer duvido actualiza o caixa!"], 404);
+                        }
                     }else{
-                        ###
+                        return response()->json(['message' => "Por favor, verificar se informou o caixa correcto!"], 404);
                     }
-                
-                }else{
-                    return redirect()->back()->with("danger", "Por favor verificar se informou o caixa correcto!");
+                    
+                }else {
+                    //  NAO USA A CONTABILIDADE
+                    $conta = Caixa::find($request->caixa_id);
+                              
+                    $this->registra_operacoes(  
+                        $motante,
+                        $conta->id,
+                        $request->cliente_id,
+                        $request->tipo_servico_id == "receita" ? "R" : "D",
+                        $request->status_pagamento,
+                        $code,
+                        $request->tipo_servico_id == "receita" ? "E" : "S",
+                        $data_at,
+                        $entidade->empresa->id,
+                        $request->referencia,
+                        Auth::user()->id,
+                        $caixaActivo ? 'pendente' : 'concluido',
+                        'C', 
+                        $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                        $request->tipo_id,
+                        $request->parcelado,
+                        $request->parcelas,
+                        $request->fornecedor_id
+                    );
                 }
             }
             
             if($formaPagamento->tipo == "MB" || $formaPagamento->tipo == "DE" || $formaPagamento->tipo == "TE"){
-                $conta = ContaBancaria::find($request->banco_id);
-                if($conta){
-                    $subconta = Subconta::where('code', $conta->code)->first();
-                    
-                    if($subconta){
-                        $operacoes = OperacaoFinanceiro::create([
-                            'nome' => $request->referencia,
-                            'status' => $request->status_pagamento,
-                            'motante' => $request->motante,
-                            // 'caixa_id' => $request->caixa_id,
-                            'subconta_id' => $subconta->id,
-                            // 'banco_id' => $request->banco_id,
-                            'cliente_id' => $request->cliente_id,
-                            'fornecedor_id' => $request->fornecedor_id,
-                            'model_id' => $request->tipo_id,
-                            'type' => $request->tipo_servico_id == "receita" ? "R" : "D",
-                            'status_pagamento' => $request->status_pagamento,
-                            'parcelado' => $request->parcelado,
-                            'parcelas' => $request->parcelas,
-                            'data_recebimento' => $request->data_recebimento,
-                            'data_pagamento' => $request->data_pagamento,
-                            'forma_recebimento_id' => $request->forma_recebimento_id,
-                            'forma_pagamento_id' => $request->forma_pagamento_id,
-                            'code' => $code,
-                            'descricao' => $request->descricao,
-                            'movimento' =>  $request->tipo_servico_id == "receita" ? "E" : "S",
-                            'date_at' => $request->data_pagamento ?? $request->data_recebimento,
-                            'user_id' => Auth::user()->id,
-                            'entidade_id' => $entidade->empresa->id,
-                        ]);
+           
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                                
+                    $conta = ContaBancaria::find($request->banco_id);
+                    if($conta){
+                        $subconta = Subconta::where('code', $conta->code)->first();
+                        
+                        if($subconta){
+                            
+                            $this->registra_operacoes(  
+                                $request->motante,
+                                $subconta->id,
+                                $request->cliente_id,
+                                $request->tipo_servico_id == "receita" ? "R" : "D",
+                                $request->status_pagamento,
+                                $code,
+                                $request->tipo_servico_id == "receita" ? "E" : "S",
+                                $data_at,
+                                $entidade->empresa->id,
+                                $request->referencia,
+                                Auth::user()->id,
+                                $caixaActivo ? 'pendente' : 'concluido', 
+                                'B', 
+                                $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                                $request->tipo_id,
+                                $request->parcelado,
+                                $request->parcelas,
+                                $request->fornecedor_id
+                            );
+                            
+                        }else{
+                            return response()->json(['message' => "Por favor, verificar se esta conta bancária foi criado ou cadastrado correctamente, para qualquer duvido actualiza a conta bancária!"], 404);
+                        }
                     }else{
-                        ###
+                        return response()->json(['message' => "Por favor, verificar se informou a conta bancária correcto!"], 404);
                     }
-                
-                }else{
-                    return redirect()->back()->with("danger", "Por favor verificar se informou o banco correcto!");
+                }else {
+                    
+                    $conta = ContaBancaria::find($request->banco_id);
+                    
+                    $this->registra_operacoes(  
+                        $motante,
+                        $conta->id,
+                        $request->cliente_id,
+                        $request->tipo_servico_id == "receita" ? "R" : "D",
+                        $request->status_pagamento,
+                        $code,
+                        $request->tipo_servico_id == "receita" ? "E" : "S",
+                        $data_at,
+                        $entidade->empresa->id,
+                        $request->referencia,
+                        Auth::user()->id,
+                        $caixaActivo ? 'pendente' : 'concluido', 
+                        'B', 
+                        $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                        $request->tipo_id,
+                        $request->parcelado,
+                        $request->parcelas,
+                        $request->fornecedor_id
+                    );
+
                 }
+
             }
             
             if($formaPagamento->tipo == "OU"){
-                $conta = Caixa::find($request->caixa_id);
-                $conta1 = ContaBancaria::find($request->banco_id);
                 
-                if($conta){
-                    $subconta = Subconta::where('code', $conta->code)->first();
-                    if($subconta){
-                        $operacoes = OperacaoFinanceiro::create([
-                            'nome' => $request->referencia,
-                            'status' => $request->status_pagamento,
-                            'motante' => $request->motante,
-                            'subconta_id' => $subconta->id,
-                            'cliente_id' => $request->cliente_id,
-                            'fornecedor_id' => $request->fornecedor_id,
-                            'model_id' => $request->tipo_id,
-                            'type' => $request->tipo_servico_id == "receita" ? "R" : "D",
-                            'status_pagamento' => $request->status_pagamento,
-                            'parcelado' => $request->parcelado,
-                            'parcelas' => $request->parcelas,
-                            'data_recebimento' => $request->data_recebimento,
-                            'data_pagamento' => $request->data_pagamento,
-                            'forma_recebimento_id' => $request->forma_recebimento_id,
-                            'forma_pagamento_id' => $request->forma_pagamento_id,
-                            'code' => $code,
-                            'descricao' => $request->descricao,
-                            'movimento' =>  $request->tipo_servico_id == "receita" ? "E" : "S",
-                            'date_at' => $request->data_pagamento ?? $request->data_recebimento,
-                            'user_id' => Auth::user()->id,
-                            'entidade_id' => $entidade->empresa->id,
-                        ]);
-                    }else {
-                        ##
+                if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                    $conta = Caixa::find($request->caixa_id);
+                    $conta1 = ContaBancaria::find($request->banco_id);
+                    
+                    if($conta){
+                        $subconta = Subconta::where('code', $conta->code)->first();
+                        if($subconta){
+                            
+                            $this->registra_operacoes(  
+                                $request->motante,
+                                $subconta->id,
+                                $request->cliente_id,
+                                $request->tipo_servico_id == "receita" ? "R" : "D",
+                                $request->status_pagamento,
+                                $code,
+                                $request->tipo_servico_id == "receita" ? "E" : "S",
+                                $data_at,
+                                $entidade->empresa->id,
+                                $request->referencia,
+                                Auth::user()->id,
+                                $caixaActivo ? 'pendente' : 'concluido', 
+                                'C', 
+                                $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                                $request->tipo_id,
+                                $request->parcelado,
+                                $request->parcelas,
+                                $request->fornecedor_id
+                            );
+                        
+                        }else {
+                            return response()->json(['message' => "Por favor, verificar se este caixa foi criado ou cadastrado correctamente, para qualquer duvido actualiza a conta bancária!"], 404);
+                        }
+                    }else{
+                        return response()->json(['message' => "Por favor, verificar se informou o caixa correcto!"], 404);
                     }
-                }else{
-                    return redirect()->back()->with("danger", "Por favor verificar se informou um caixa correcto!");
-                }
-                if($conta1){
-                    $subconta = Subconta::where('code', $conta1->code)->first();
-                    if($subconta){
-                        $operacoes = OperacaoFinanceiro::create([
-                            'nome' => $request->referencia,
-                            'status' => $request->status_pagamento,
-                            'motante' => $request->motante_banco,
-                            'subconta_id' => $subconta->id,
-                            'cliente_id' => $request->cliente_id,
-                            'fornecedor_id' => $request->fornecedor_id,
-                            'model_id' => $request->tipo_id,
-                            'type' => $request->tipo_servico_id == "receita" ? "R" : "D",
-                            'status_pagamento' => $request->status_pagamento,
-                            'parcelado' => $request->parcelado,
-                            'parcelas' => $request->parcelas,
-                            'data_recebimento' => $request->data_recebimento,
-                            'data_pagamento' => $request->data_pagamento,
-                            'forma_recebimento_id' => $request->forma_recebimento_id,
-                            'forma_pagamento_id' => $request->forma_pagamento_id,
-                            'code' => $code,
-                            'descricao' => $request->descricao,
-                            'movimento' =>  $request->tipo_servico_id == "receita" ? "E" : "S",
-                            'date_at' => $request->data_pagamento ?? $request->data_recebimento,
-                            'user_id' => Auth::user()->id,
-                            'entidade_id' => $entidade->empresa->id,
-                        ]);
-                    }else {
-                        ##
+                    if($conta1){
+                        $subconta = Subconta::where('code', $conta1->code)->first();
+                        if($subconta){
+                            
+                            $this->registra_operacoes(  
+                                $request->motante_banco,
+                                $subconta->id,
+                                $request->cliente_id,
+                                $request->tipo_servico_id == "receita" ? "R" : "D",
+                                $request->status_pagamento,
+                                $code,
+                                $request->tipo_servico_id == "receita" ? "E" : "S",
+                                $data_at,
+                                $entidade->empresa->id,
+                                $request->referencia,
+                                Auth::user()->id,
+                                $caixaActivo ? 'pendente' : 'concluido', 
+                                'B', 
+                                $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                                $request->tipo_id,
+                                $request->parcelado,
+                                $request->parcelas,
+                                $request->fornecedor_id
+                            );
+                        
+                        }else {
+                            return response()->json(['message' => "Por favor, verificar se esta conta bancária foi criado ou cadastrado correctamente, para qualquer duvido actualiza a conta bancária!"], 404);
+                        }
+                    }else{
+                        return response()->json(['message' => "Por favor, verificar se informou a conta bancária correcto!"], 404);
                     }
+                
                 }else{
-                    return redirect()->back()->with("danger", "Por favor verificar se informou um caixa correcto!");
+                    $conta = Caixa::find($request->caixa_id);
+                    $conta1 = ContaBancaria::find($request->banco_id);
+                    
+                    $this->registra_operacoes(  
+                        $request->motante,
+                        $conta->id,
+                        $request->cliente_id,
+                        $request->tipo_servico_id == "receita" ? "R" : "D",
+                        $request->status_pagamento,
+                        $code,
+                        $request->tipo_servico_id == "receita" ? "E" : "S",
+                        $data_at,
+                        $entidade->empresa->id,
+                        $request->referencia,
+                        Auth::user()->id,
+                        $caixaActivo ? 'pendente' : 'concluido', 
+                        'C', 
+                        $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                        $request->tipo_id,
+                        $request->parcelado,
+                        $request->parcelas,
+                        $request->fornecedor_id
+                    );
+                    
+                    $this->registra_operacoes(  
+                        $request->motante_banco,
+                        $conta1->id,
+                        $request->cliente_id,
+                        $request->tipo_servico_id == "receita" ? "R" : "D",
+                        $request->status_pagamento,
+                        $code,
+                        $request->tipo_servico_id == "receita" ? "E" : "S",
+                        $data_at,
+                        $entidade->empresa->id,
+                        $request->referencia,
+                        Auth::user()->id,
+                        $caixaActivo ? 'pendente' : 'concluido', 
+                        'B', 
+                        $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                        $request->tipo_id,
+                        $request->parcelado,
+                        $request->parcelas,
+                        $request->fornecedor_id
+                    );
+                    
                 }
+            
             }
+            
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
             DB::commit();
         } catch (\Exception $e) {
@@ -629,7 +857,7 @@ class OperacaoFinanceiraController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $operacao = OperacaoFinanceiro::findOrFail($id);
+        $operacao = OperacaoFinanceiro::with(['subconta', 'fornecedor','cliente','dispesa', 'caixa','contabancaria','receita','user' ,'entidade'])->findOrFail($id);
                
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
@@ -680,24 +908,25 @@ class OperacaoFinanceiraController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $operacao = OperacaoFinanceiro::with(['subconta', 'fornecedor','cliente','dispesa','receita','user' ,'entidade'])->findOrFail($id);
-        $itemOperacoes = OperacaoFinanceiro::where('code')->get();
+        $operacao = OperacaoFinanceiro::with(['subconta', 'fornecedor','cliente','dispesa', 'caixa','contabancaria','receita','user' ,'entidade'])->findOrFail($id);
+        $itemOperacoes = OperacaoFinanceiro::with(['subconta', 'fornecedor','cliente','dispesa', 'caixa','contabancaria','receita','user' ,'entidade'])->where('code', $operacao->code)->get();
                
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
         if($operacao->type == "R"){
-            $titulo = "Registro de RECEITA";
+            $titulo = "REGISTRO DE RECEITA";
         }
         
         if($operacao->type == "D"){
-            $titulo = "Registro de DESPESA";
+            $titulo = "REGISTRO DE DESPESA";
         }
     
         $head = [
             'titulo' => $titulo,
-            'descricao' => "EA - VIEGAS",
+            'descricao' => env('APP_NAME'),
             "operacao" => $operacao,
             "entidade" => $entidade,
+            "itemOperacoes" => $itemOperacoes,
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];
 
@@ -842,13 +1071,25 @@ class OperacaoFinanceiraController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-      
-        $registro = OperacaoFinanceiro::onlyTrashed()->find($id);
-        if ($registro) {
-            $registro->restore();
+        
+        //
+        try {
+            DB::beginTransaction();
+            $registro = OperacaoFinanceiro::onlyTrashed()->find($id);
+            if ($registro) {
+                $registro->restore();
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->route('operacaoes-financeiras.lixeira')->with("success", "Dados Excluído com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados recuperados com sucesso!"], 200);
       
     }
 
@@ -884,8 +1125,7 @@ class OperacaoFinanceiraController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-        return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-
+        return response()->json(['success' => true, 'message' => "Dados Excluídos com sucesso!"], 200);
     }
 
 }

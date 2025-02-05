@@ -8,6 +8,7 @@ use App\Models\Marca;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 
 class DepartamentoController extends Controller
@@ -28,7 +29,6 @@ class DepartamentoController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-        
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
         $departamentos = Departamento::where([
@@ -90,20 +90,31 @@ class DepartamentoController extends Controller
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
 
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
-        
-        $categoria = Departamento::create([
-            'entidade_id' => $entidade->empresa->id, 
-            'nome' => $request->nome,
-            'status' => $request->status,
-            'user_id' => Auth::user()->id,
-        ]);
 
-        if($categoria->save()){
-            return redirect()->route('departamentos.index')->with("success", "Dados Cadastrar com Sucesso!");
-        }else{
-            return redirect()->route('departamentos.create')->with("warning", "Erro ao tentar cadastrar Departamento");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+            
+            Departamento::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => $request->nome,
+                'status' => $request->status,
+                'user_id' => Auth::user()->id,
+            ]);            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+
     }
 
     
@@ -172,7 +183,6 @@ class DepartamentoController extends Controller
     public function update(Request $request, $id)
     {
         //
-        
         $user = auth()->user();
         
         if(!$user->can('editar departamento')){
@@ -186,14 +196,28 @@ class DepartamentoController extends Controller
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
 
-        $departamento = Departamento::findOrFail($id);
-        $departamento->update($request->all());
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+      
+            $departamento = Departamento::findOrFail($id);
+            $departamento->update($request->all());
+    
+            $departamento->update();      
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        if($departamento->update()){
-            return redirect()->route('departamentos.index')->with("success", "Dados Actualizados com Sucesso!");
-        }else{
-            return redirect()->route('departamentos.edit')->with("warning", "Erro ao tentar Actualizar Departamento");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+
     }
 
         /**
@@ -211,12 +235,26 @@ class DepartamentoController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $departamento = Departamento::findOrFail($id);
-        if($departamento->delete()){
-            return redirect()->route('departamentos.index')->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->route('departamentos.index')->with("warning", "Erro ao tentar Excluir Departamento");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+                        
+            $departamento = Departamento::findOrFail($id);
+            $departamento->delete();
+        
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluídos com sucesso!"], 200);
+
     }
 
 }

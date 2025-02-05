@@ -375,6 +375,7 @@ class ReservaController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "PAGAMENTO DA RESERVA DO QUARTO",
                     'status' => "pago",
+                    'formas' => "C",
                     'motante' => $request->valor_entregue,
                     'subconta_id' => $subconta_caixa->id,
                     'fornecedor_id' => $request->cliente_id,
@@ -404,6 +405,7 @@ class ReservaController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "PAGAMENTO DA RESERVA DO QUARTO",
                     'status' => "pago",
+                    'formas' => "B",
                     'motante' => $request->valor_entregue,
                     'subconta_id' => $subconta_banco->id,
                     'fornecedor_id' => $request->cliente_id,
@@ -583,6 +585,7 @@ class ReservaController extends Controller
                     OperacaoFinanceiro::create([
                         'nome' => "PAGAMENTO DA RESERVA DO QUARTO",
                         'status' => "pago",
+                        'formas' => "C",
                         'motante' => $valor_a_pagar,
                         'subconta_id' => $subconta_caixa->id,
                         'fornecedor_id' => $request->cliente_id,
@@ -612,6 +615,7 @@ class ReservaController extends Controller
                     OperacaoFinanceiro::create([
                         'nome' => "PAGAMENTO DA RESERVA DO QUARTO",
                         'status' => "pago",
+                        'formas' => "B",
                         'motante' => $valor_a_pagar,
                         'subconta_id' => $subconta_banco->id,
                         'fornecedor_id' => $request->cliente_id,
@@ -758,6 +762,7 @@ class ReservaController extends Controller
             OperacaoFinanceiro::create([
                 'nome' => "REEMBOLSO DOS VALORES DA RESERVADA",
                 'status' => "pago",
+                'formas' => "C",
                 'motante' => $reserva->valor_total,
                 'subconta_id' => $subconta->id,
                 'fornecedor_id' => $reserva->cliente_id,

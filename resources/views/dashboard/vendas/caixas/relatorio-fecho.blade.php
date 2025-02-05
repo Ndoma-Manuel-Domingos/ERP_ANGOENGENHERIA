@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>FACTURA RECIBO</title>
+    <title>FECHO DE CAIXA</title>
 
     <style type="text/css">
         *{
@@ -104,15 +104,13 @@
 
 </head>
 <body>
-
-    
         
     @if ($tipo_entidade_logado->empresa->tipo_factura == "Normal")
     <header style="position: absolute;top: 30;right: 30px;left: 30px;">
         <table>
             <tr>
                 <td rowspan="">
-                    <img src="{{ public_path("images/empresa/".$tipo_entidade_logado->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    <img src="{{ public_path("images/empresa/".$tipo_entidade_logado->empresa->logotipo) }}" alt="" style="text-align: center;height: 90px;width: 120px;">
                 </td>
             </tr>
             <tr>
@@ -167,10 +165,10 @@
                 <th colspan="12" style="text-align: center;font-size: 15px;">Resumo dos Movimentos</th>
               </tr>
               <tr>
-                <th colspan="5" style="font-size: 12px;">Tipo</th>
-                <th style="text-align: right;padding: 10px 0;font-size: 12px;">Credito</th>
-                <th style="text-align: right;font-size: 12px;">Debito</th>
-                <th colspan="5" style="text-align: right;font-size: 12px;">Montante</th>
+                <th colspan="5" style="font-size: 12px;padding: 5px;border: 1px solid #ccc;">Tipo</th>
+                <th style="text-align: right;padding: 10px 0;font-size: 12px;padding: 5px;border: 1px solid #ccc;">Credito</th>
+                <th style="text-align: right;font-size: 12px;padding: 5px;border: 1px solid #ccc;">Debito</th>
+                <th colspan="5" style="text-align: right;font-size: 12px;padding: 5px;border: 1px solid #ccc;">Montante</th>
               </tr>
             </thead>
             <tbody>
@@ -178,52 +176,51 @@
                     $saldo = $debito - $credito;
                  @endphp
               <tr>
-                <td colspan="5" style="font-size: 12px;">Entradas por Multicaixa(TPA)</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($multicaixa_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($multicaixa_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 12px;text-align: right">{{ number_format($multicaixa, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Multicaixa(TPA)</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa, 2, ',', '.') }}</td>
               </tr>
 
               <tr>
-                <td colspan="5" style="font-size: 12px;">Entradas por Numerário(Cash)</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($numerorio_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($numerorio_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 12px;text-align: right">{{ number_format($numerorio, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Numerário(Cash)</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($numerorio_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($numerorio_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($numerorio, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 12px;">Entradas por Multicaixa & Numerário (DUPLO)</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($duplo_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">{{ number_format($duplo_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 12px;text-align: right">{{ number_format($duplo, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Multicaixa & Numerário (DUPLO)</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($duplo_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($duplo_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($duplo, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 12px;">Saída <small class="text-info">(incluindo todas as operações)</small></td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <td colspan="5" style="font-size: 12px;text-align: right">{{ number_format($credito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;padding: 5px;border-bottom: 1px solid #ccc;">Saída <small class="text-info">(incluindo todas as operações)</small></td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td colspan="5" style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($credito, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 12px;">Entrada <small class="text-info">(incluindo todas as operações)</small></td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <td colspan="5" style="font-size: 12px;text-align: right">{{ number_format($debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 12px;padding: 5px;border-bottom: 1px solid #ccc;">Entrada <small class="text-info">(incluindo todas as operações)</small></td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td colspan="5" style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($debito, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <th colspan="5" style="font-size: 15px;">Saldo Final</th>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 10px">--</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <th colspan="5" style="text-align: right;font-size: 15px;">{{ number_format($saldo, 2, ',', '.') }} <small>{{ $empresa->moeda }}</small></th>
+                <th colspan="5" style="font-size: 15px;padding: 5px;border-bottom: 1px solid #ccc;">Saldo Final</th>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <th colspan="5" style="text-align: right;font-size: 15px;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($saldo, 2, ',', '.') }} <small>{{ $empresa->moeda }}</small></th>
               </tr>
 
             </tbody>
         </table>
 
     </main>
-
     @endif
     
     @if ($tipo_entidade_logado->empresa->tipo_factura == "Ticket")
@@ -231,7 +228,7 @@
         <table>
             <tr>
                 <td rowspan="">
-                    <img src="{{ public_path("images/empresa/".$tipo_entidade_logado->empresa->logotipo) }}" alt="" style="text-align: center;height: 100px;width: 170px;">
+                    <img src="{{ public_path("images/empresa/".$tipo_entidade_logado->empresa->logotipo) }}" alt="" style="text-align: center;height: 80px;width: 70px;">
                 </td>
             </tr>
             <tr>
@@ -273,7 +270,7 @@
         
         <table>
             <tr>
-                <th colspan="6" style="text-transform: uppercase;font-size: 11px;border: 1px solid #ccc;padding: 5px">CAIXA: {{ $caixa ? $caixa->nome : "TODOS" }}</th>
+                <th colspan="6" style="text-transform: uppercase;font-size: 11px;border: 1px solid #ccc;padding: 5px">CAIXA: {{ $subconta ? "{$subconta->conta} - {$subconta->nome}" : "TODOS" }}</th>
                 <th colspan="4" style="text-transform: uppercase;font-size: 11px;border: 1px solid #ccc;padding: 5px">DATA INICIO: {{ $data_inicio ?? "TODOS" }}</th>
                 <th colspan="4" style="text-transform: uppercase;font-size: 11px;border: 1px solid #ccc;padding: 5px">DATA FINAL: {{ $data_final ?? "TODOS" }}</th>
             </tr>
@@ -296,55 +293,51 @@
                     $saldo = $debito - $credito;
                  @endphp
               <tr>
-                <td colspan="5" style="font-size: 10px;">Entradas por Multicaixa(TPA)</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($multicaixa_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($multicaixa_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 10px;text-align: right">{{ number_format($multicaixa, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Multicaixa(TPA)</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($multicaixa, 2, ',', '.') }}</td>
               </tr>
 
               <tr>
-                <td colspan="5" style="font-size: 10px;">Entradas por Numerário(Cash)</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($numerorio_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($numerorio_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 10px;text-align: right">{{ number_format($numerorio, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Numerário(Cash)</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($numerorio_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($numerorio_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($numerorio, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 10px;">Entradas por Multicaixa & Numerário (DUPLO)</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($duplo_credito, 2, ',', '.') }}</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">{{ number_format($duplo_debito, 2, ',', '.') }}</td>
-                <td colspan="5" style="font-size: 10px;text-align: right">{{ number_format($duplo, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;padding: 5px;border-bottom: 1px solid #ccc;">Entradas por Multicaixa & Numerário (DUPLO)</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($duplo_credito, 2, ',', '.') }}</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">{{ number_format($duplo_debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($duplo, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 10px;">Saída <small class="text-info">(incluindo todas as operações)</small></td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">--</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">--</td>
-                <td colspan="5" style="font-size: 10px;text-align: right">{{ number_format($credito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;padding: 5px;border-bottom: 1px solid #ccc;">Saída <small class="text-info">(incluindo todas as operações)</small></td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">--</td>
+                <td colspan="5" style="font-size: 10px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($credito, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <td colspan="5" style="font-size: 10px;">Entrada <small class="text-info">(incluindo todas as operações)</small></td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">--</td>
-                <td style="padding: 5px 0;font-size: 10px;text-align: right">--</td>
-                <td colspan="5" style="font-size: 10px;text-align: right">{{ number_format($debito, 2, ',', '.') }}</td>
+                <td colspan="5" style="font-size: 10px;padding: 5px;border-bottom: 1px solid #ccc;">Entrada <small class="text-info">(incluindo todas as operações)</small></td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px;font-size: 10px;text-align: right;border-bottom: 1px solid #ccc;">--</td>
+                <td colspan="5" style="font-size: 10px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($debito, 2, ',', '.') }}</td>
               </tr>
               
               <tr>
-                <th colspan="5" style="font-size: 15px;">Saldo Final</th>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right;padding: 10px">--</td>
-                <td style="padding: 5px 0;font-size: 12px;text-align: right">--</td>
-                <th colspan="5" style="text-align: right;font-size: 15px;">{{ number_format($saldo, 2, ',', '.') }} <small>{{ $empresa->moeda }}</small></th>
+                <th colspan="5" style="font-size: 15px;padding: 5px;border-bottom: 1px solid #ccc;">Saldo Final</th>
+                <td style="font-size: 12px;text-align: right;padding: 5px;border-bottom: 1px solid #ccc;">--</td>
+                <td style="padding: 5px;font-size: 12px;text-align: right;border-bottom: 1px solid #ccc;">--</td>
+                <th colspan="5" style="text-align: right;font-size: 15px;padding: 5px;border-bottom: 1px solid #ccc;">{{ number_format($saldo, 2, ',', '.') }} <small>{{ $empresa->moeda }}</small></th>
               </tr>
 
             </tbody>
         </table>
 
     </main>
-
     @endif
-
-    
-
 </body>
 </html>

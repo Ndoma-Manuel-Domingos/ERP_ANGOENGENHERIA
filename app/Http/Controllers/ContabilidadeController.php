@@ -691,6 +691,7 @@ class ContabilidadeController extends Controller
             OperacaoFinanceiro::create([
                 'nome' => "BALANÇO INICAL",
                 'status' => "pago",
+                'formas' => "O",
                 'motante' => $request->saldo,
                 'subconta_id' => $subconta->id,
                 'cliente_id' => NULL,

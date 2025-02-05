@@ -199,44 +199,55 @@ class FornecedorController extends Controller
             $nova_conta = "";
             
             
-            if($request->tipo_fornecedor == "corrente"){
-                $conta = Conta::where('conta', '32')->first();
-                if($request->pais == "AO"){
-                    $serie =  "32.1.2.1.";
-                }else{
-                    $serie =  "32.1.2.2.";
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                
+                if($request->tipo_fornecedor == "corrente"){
+                    $conta = Conta::where('conta', '32')->first();
+                    if($request->pais == "AO"){
+                        $serie =  "32.1.2.1.";
+                    }else{
+                        $serie =  "32.1.2.2.";
+                    }
                 }
-            }
-            if($request->tipo_fornecedor == "titulos a pagar"){
-                $conta = Conta::where('conta', '32')->first();
-                if($request->pais == "AO"){
-                    $serie =  "32.2.2.1.";
-                }else{
-                    $serie =  "32.2.2.2.";
+                if($request->tipo_fornecedor == "titulos a pagar"){
+                    $conta = Conta::where('conta', '32')->first();
+                    if($request->pais == "AO"){
+                        $serie =  "32.2.2.1.";
+                    }else{
+                        $serie =  "32.2.2.2.";
+                    }
                 }
-            }
-            if($request->tipo_fornecedor == "imobilizados"){
-                $conta = Conta::where('conta', '37')->first();
-                $serie =  "37.1.1.";
+                if($request->tipo_fornecedor == "imobilizados"){
+                    $conta = Conta::where('conta', '37')->first();
+                    $serie =  "37.1.1.";
+                }
+                
+                if($conta){
+                    $subc_ = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
+                    $nova_conta =  $serie . "{$subc_}";
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }else{
+                    ######################
+                    ## depois vamos dar o tratamento
+                }
+            }else {
+            
+                $serie =  "32.1.2.1.";
+                
+                $subc_ = Fornecedore::where('conta', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
+                $nova_conta =  $serie . "{$subc_}";
+            
             }
             
-            if($conta){
-                $subc_ = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
-                $nova_conta =  $serie . "{$subc_}";
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            }else{
-                ######################
-                ## depois vamos dar o tratamento
-            }
             
             $fornecedores = Fornecedore::create([
                 "nif" => $request->nif,
@@ -475,60 +486,65 @@ class FornecedorController extends Controller
     
             $fornecedores = Fornecedore::findOrFail($id);
            
-            if($request->tipo_fornecedor == "corrente"){
-                $conta = Conta::where('conta', '32')->first();
-                if($request->pais == "AO"){
-                    $serie =  "32.1.2.1.";
-                }else{
-                    $serie =  "32.1.2.2.";
+           
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                if($request->tipo_fornecedor == "corrente"){
+                    $conta = Conta::where('conta', '32')->first();
+                    if($request->pais == "AO"){
+                        $serie =  "32.1.2.1.";
+                    }else{
+                        $serie =  "32.1.2.2.";
+                    }
                 }
-            }
-            if($request->tipo_fornecedor == "titulos a pagar"){
-                $conta = Conta::where('conta', '32')->first();
-                if($request->pais == "AO"){
-                    $serie =  "32.2.2.1.";
-                }else{
-                    $serie =  "32.2.2.2.";
+                if($request->tipo_fornecedor == "titulos a pagar"){
+                    $conta = Conta::where('conta', '32')->first();
+                    if($request->pais == "AO"){
+                        $serie =  "32.2.2.1.";
+                    }else{
+                        $serie =  "32.2.2.2.";
+                    }
                 }
-            }
-            if($request->tipo_fornecedor == "imobilizados"){
-                $conta = Conta::where('conta', '37')->first();
-                $serie =  "37.1.1.";
-            }
-            
-            $subc_ = Subconta::where('code', $fornecedores->code)->where('entidade_id', $entidade->empresa->id)->first();
-            
-            if($subc_){
+                if($request->tipo_fornecedor == "imobilizados"){
+                    $conta = Conta::where('conta', '37')->first();
+                    $serie =  "37.1.1.";
+                }
                 
-                $numero = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
-               
-                $nova_conta =  $serie . "{$numero}";
-            
-                $subc_up = Subconta::findOrFail($subc_->id);
-                $subc_up->numero = $nova_conta;
-                $subc_up->nome = $request->nome;
-                $subc_up->update();
+                $subc_ = Subconta::where('code', $fornecedores->code)->where('entidade_id', $entidade->empresa->id)->first();
                 
-                $code =  $subc_up->code;
+                if($subc_){
+                    
+                    $numero = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
+                   
+                    $nova_conta =  $serie . "{$numero}";
+                
+                    $subc_up = Subconta::findOrFail($subc_->id);
+                    $subc_up->numero = $nova_conta;
+                    $subc_up->nome = $request->nome;
+                    $subc_up->update();
+                    
+                    $code =  $subc_up->code;
+                }else {
+                    $numero = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
+                    $nova_conta =  $serie . "{$numero}";
+                    $code = uniqid(time());
+                    
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $conta->status,
+                        'conta_id' => $conta->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }
+            
             }else {
-                $numero = Subconta::where('numero', 'like', "{$serie}%")->where('entidade_id', $entidade->empresa->id)->count() + 1;
-               
-                $nova_conta =  $serie . "{$numero}";
-                
+                $nova_conta = $fornecedores->conta;
                 $code = uniqid(time());
-                
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $conta->status,
-                    'conta_id' => $conta->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            
             }
+           
          
             $fornecedores->nif = $request->nif;
             $fornecedores->code = $code;

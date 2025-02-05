@@ -107,14 +107,13 @@
                         </div>  
                         <div class="card-footer">
                             @if ($bancoActivo)
-                                <a href="{{ route('contas-bancarias.fechamento') }}" class="btn-sm btn-danger">Fecha o TPA activo</a>
+                                <a href="{{ route('contas-bancarias.fechamento', $bancoActivo->id) }}" data-id="{{ $bancoActivo->id }}" class="btn-sm btn-danger fechar-conta-bancaria">Fecha o TPA activo</a>
                             @else
                                 <a href="{{ route('contas-bancarias.abertura') }}" class="btn-sm btn-success">Activar TPA</a>
                             @endif
                         </div>
                     </div>
                 </div>
-                
                 
                 <div class="col-md-6 col-12">
                     <div class="card">
@@ -130,7 +129,7 @@
                         </div>  
                         <div class="card-footer">
                             @if ($caixaActivo)
-                                <a href="{{ route('caixa.fechamento_caixa') }}" class="btn-sm btn-danger">Fecha o Caixa aberto</a>
+                                <a href="{{ route('caixa.fechamento_caixa', $caixaActivo->id) }}" class="btn-sm btn-danger">Fecha o Caixa aberto</a>
                             @else
                                 <a href="{{ route('caixa.abertura_caixa') }}" class="btn-sm btn-success">Abertura do Caixa</a>
                             @endif
@@ -149,4 +148,64 @@
 <!-- /.content-wrapper -->
 
 {{-- @include('dashboard.config.modal.dados-empresa') --}}
+@endsection
+
+
+
+@section('scripts')
+<script>
+    $(document).on('click', '.fechar-conta-bancaria', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, desejo!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('contas-bancarias.fechamento', ':id') }}`.replace(':id', recordId)
+                    , method: 'GET'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
+    });
+
+    $(function() {
+        $("#carregar_tabela").DataTable({
+            language: {
+                url: "{{ asset('plugins/datatables/pt_br.json') }}"
+            }
+            , "responsive": true
+            , "lengthChange": false
+            , "autoWidth": false
+            , "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+    });
+
+</script>
 @endsection

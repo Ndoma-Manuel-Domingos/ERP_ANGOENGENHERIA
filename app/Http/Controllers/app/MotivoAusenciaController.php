@@ -7,19 +7,18 @@ use App\Models\MotivoAusencia;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 
 class MotivoAusenciaController extends Controller
 {
-    //
-        /**
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        //
         //
         $user = auth()->user();
 
@@ -91,17 +90,28 @@ class MotivoAusenciaController extends Controller
 
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
-        $motivo = MotivoAusencia::create([
-            'entidade_id' => $entidade->empresa->id, 
-            'nome' => $request->nome,
-            'user_id' => Auth::user()->id,
-        ]);
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            $motivo = MotivoAusencia::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => $request->nome,
+                'user_id' => Auth::user()->id,
+            ]);
+    
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        if($motivo->save()){
-            return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar cadastrar Departamento");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+ 
     }
 
     
@@ -170,7 +180,6 @@ class MotivoAusenciaController extends Controller
     public function update(Request $request, $id)
     {
         //
-        
         $user = auth()->user();
         
         if(!$user->can('editar motivo')){
@@ -183,15 +192,25 @@ class MotivoAusenciaController extends Controller
         ],[
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
+        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            $motivo = MotivoAusencia::findOrFail($id);
+            $motivo->update($request->all());            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        $motivo = MotivoAusencia::findOrFail($id);
-        $motivo->update($request->all());
-
-        if($motivo->update()){
-            return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Actualizar Motivo");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+
     }
 
         /**
@@ -209,12 +228,23 @@ class MotivoAusenciaController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $motivo = MotivoAusencia::findOrFail($id);
-        if($motivo->delete()){
-            return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Excluir motivo");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            $motivo = MotivoAusencia::findOrFail($id);
+            $motivo->delete();
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluídos com sucesso!"], 200);  
     }
 
 }

@@ -130,8 +130,6 @@
 </div>
 <!-- /.content-wrapper -->
 
-{{-- @include('dashboard.bancos.modal.create') --}}
-
 @endsection
 
 @section('scripts')

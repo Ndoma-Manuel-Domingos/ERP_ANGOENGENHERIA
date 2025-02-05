@@ -35,7 +35,6 @@ use PDF;
 class CaixaController extends Controller
 {
     //
-    
     use TraitHelpers;
     
     public function caixas()
@@ -208,58 +207,62 @@ class CaixaController extends Controller
             $code = uniqid(time());
         
             $caixaActivo = Caixa::findOrFail($request->caixa_id);
-            $exercicio = Exercicio::findOrFail($this->exercicio());
-            $periodo = Periodo::where('exercicio_id', $exercicio->id)
-            ->orderBy('id', 'desc') // ou por outra coluna que determine a ordem desejada
-            ->first();
             
-            $subconta = Subconta::where('entidade_id' , $entidade->empresa->id)->where('code', $caixaActivo->code)->first();
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
             
-            if($subconta){
-                          
-                $caixaActivo->status = "aberto";
-                $caixaActivo->active = true;
-                $caixaActivo->continuar_apos_login = true;
-                $caixaActivo->user_id = Auth::user()->id;
+                $exercicio = Exercicio::findOrFail($this->exercicio());
+                $periodo = Periodo::where('exercicio_id', $exercicio->id)->orderBy('id', 'desc')->first();
                 
-                $caixaActivo->update();
+                $subconta = Subconta::where('entidade_id' , $entidade->empresa->id)->where('code', $caixaActivo->code)->first();
+                  
+                if($subconta){
+                    Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta->id,
+                        'exercicio_id' => $exercicio->id,
+                        'periodo_id' => $periodo->id,
+                        'status' => true,
+                        'movimento' => 'E',
+                        'observacao' => 'Saldo Inicial - Diario',
+                        'credito' => 0,
+                        'debito' => $request->valor,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                    ]);
+                }else {
+                    return response()->json(['message' => "Por favor, verifica se esta caixa foi criado correctamente, actualiza este caixa. !"], 404);
+                }
                 
-                Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta->id,
-                    'exercicio_id' => $exercicio->id,
-                    'periodo_id' => $periodo->id,
-                    'status' => true,
-                    'movimento' => 'E',
-                    'observacao' => 'Saldo Inicial - Diario',
-                    'credito' => 0,
-                    'debito' => $request->valor,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                ]);
-                
-                OperacaoFinanceiro::create([
-                    'nome' => $subconta->nome,
-                    'status' => "pago",
-                    'motante' => $request->valor,
-                    'subconta_id' => $subconta->id,
-                    'model_id' => 7,
-                    'type' => "R",
-                    'parcelado' => "N",
-                    'status_pagamento' => "pago",
-                    'data_recebimento' => date("Y-m-d"),
-                    'code' => $code,
-                    'descricao' => "Saldo Inicial - Abertura caixa (Entrada de Valores)",
-                    'movimento' => "E",
-                    'date_at' => date("Y-m-d"),
-                    'user_id' => Auth::user()->id,
-                    'entidade_id' => $entidade->empresa->id,
-                ]);
-            }else {
-                ## tratamento depois
+            }else{
+            
+                $subconta = Caixa::findOrFail($request->caixa_id);
             }
-  
+            
+            $caixaActivo->status = "aberto";
+            $caixaActivo->active = true;
+            $caixaActivo->user_open_id = Auth::user()->id;
+            $caixaActivo->continuar_apos_login = true;
+            $caixaActivo->update();
+            
+            $cliente = NULL;
+            
+            $this->registra_operacoes(
+                $request->valor, // valor da operação
+                $subconta->id, // conta a ser movimentada EX: caixa / banco ou qualquer outra conta da contabilidade
+                $cliente, // cliente que 
+                "R", // tipo de operação se é receita ou dispesa
+                "pago",  // Status da operação se esta paga ou não
+                $code, // code => rash para esta operação
+                "E", // tipo de movimento se em Entrada ou saída
+                date("Y-m-d"), // data da operação
+                $entidade->empresa->id, // empresa que esta a fazer a operação
+                "Saldo Inicial - Abertura caixa (Entrada de Valores)",
+                Auth::user()->id, // user_open
+                'pendente', // status do caixa / pendente - concluido
+                "C", // forma de entrada ou saída de valores Ex: Multicaixa ou Cash
+                $caixaActivo->code_caixa, // code que identifica o caixa que esta operar,
+            );
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
             DB::commit();
         } catch (\Exception $e) {
@@ -337,7 +340,7 @@ class CaixaController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-            
+        
         $request->validate([
             'montante' => 'required',
             'tipo_movimento_id' => 'required',
@@ -377,17 +380,20 @@ class CaixaController extends Controller
                         return redirect()->back()->with('danger', 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!');
                     }
                     $subconta_saida = Subconta::where('code', $request->caixa_id)->first();
+                    $formas = "C";
                 }
                 if($request->forma_pagamento_id == "MB"){
                     if($request->banco_id == ""){
                         return redirect()->back()->with('danger', 'Deves selecionar o banco onde será retirado o valor para o pagamento da factura!');
                     }
                     $subconta_saida = Subconta::where('code', $request->banco_id)->first();
+                    $formas = "B";
                 }
               
                 OperacaoFinanceiro::create([
                     'nome' => $request->observacao ?? "PAGAMENTO DE {$subconta->nome}",
                     'status' => $status,
+                    'formas' => $formas,
                     'motante' => $request->montante,
                     'subconta_id' => $subconta->id,
                     'fornecedor_id' => $fornecedor->id,
@@ -922,8 +928,7 @@ class CaixaController extends Controller
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
         $numero = Movimento::where('entidade_id' , $entidade->empresa->id)->where('movimento', 'S')->count() + 1;
-        $ano = date("Y");
-        
+              
         try {
             DB::beginTransaction();
             
@@ -936,7 +941,7 @@ class CaixaController extends Controller
                 'caixa_id' => $caixaActivo->id,
                 'status' => true,
                 'movimento' => 'S',
-                'numero' => "NOTA Nº {$numero}/{$ano}",
+                'numero' => "NOTA Nº {$numero}/{$entidade->empresa->ano_factura}",
                 'credito' => $request->montante,
                 'debito' => 0,
                 'observacao' => $request->observacao,
@@ -1048,7 +1053,7 @@ class CaixaController extends Controller
 
     } 
 
-    public function fechamento_caixa()
+    public function fechamento_caixa($id = null)
     {
         $user = auth()->user();
         
@@ -1057,39 +1062,19 @@ class CaixaController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
         
-        $caixaActivo = Caixa::where([
-            ['active', true],
-            ['user_id', '=', Auth::user()->id],
-            ['entidade_id', '=', $entidade->empresa->id], 
-        ])->first();
-
+        $caixaActivo = Caixa::find($id);
         if(!$caixaActivo){
-            Alert::error('Erro', 'Verifica se tens um caixa aberto, por favor!');
-            return redirect()->back();
+            return response()->json(['message' => 'Verificar o caixa que pretendes fechar, por favor'], 404);
         }
-
-        $data = date("Y-m-d");
-        
-        $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-
-        $movimentos = Movimento::where('entidade_id', $entidade->empresa->id)
-        ->when($data, function ($query, $value) {
-            $query->whereDate('data_at', '>=', Carbon::createFromDate($value));
-        })
-        ->when($data, function ($query, $value) {
-            $query->whereDate('data_at', '<=', Carbon::createFromDate($value));
-        })
-        ->where('subconta_id', $subconta_caixa->id)
-        ->where('user_id', Auth::user()->id)
-        ->with(['user','subconta'])
-        ->where('entidade_id', '=', $entidade->empresa->id)
-        ->get();
+        if($caixaActivo->status == "fechado" && $caixaActivo->active == false){
+            return redirect()->route('dashboard');
+        }
         
         $credito = 0;
         $debito = 0;
-        
+                     
         $multicaixa = 0;
         $multicaixa_credito = 0;
         $multicaixa_debito = 0;
@@ -1101,33 +1086,63 @@ class CaixaController extends Controller
         $duplo = 0;
         $duplo_credito = 0;
         $duplo_debito = 0;
-            
+        
+        $movimentos = OperacaoFinanceiro::where('entidade_id', $entidade->empresa->id)
+        // ->when($data, function ($query, $value) {
+        //     $query->whereDate('date_at', '>=', Carbon::createFromDate($value));
+        // })
+        // ->when($data, function ($query, $value) {
+        //     $query->whereDate('date_at', '<=', Carbon::createFromDate($value));
+        // })
+        ->where('user_open_id', Auth::user()->id)
+        ->where('code_caixa', $caixaActivo->code_caixa)
+        ->where('status_caixa', 'pendente')
+        ->get();
+        
         foreach($movimentos as $item){
-            
-            if($item->forma_movimento == "NU"){
-                $numerorio_credito += $item->credito;
-                $numerorio_debito += $item->debito;
+        
+            if($item->formas == "C"){
+                if($item->type == "R"){
+                    $numerorio_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $numerorio_credito += $item->motante;
+                }
             }
             
-            if($item->forma_movimento == "MB"){
-                $multicaixa_credito += $item->credito;
-                $multicaixa_debito += $item->debito;
+            if($item->formas == "B"){
+            
+                if($item->type == "R"){
+                    $multicaixa_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $multicaixa_credito += $item->motante;
+                }
             }
             
-            if($item->forma_movimento == "OU"){
-                $duplo_credito += $item->credito;
-                $duplo_debito += $item->debito;
+            if($item->formas == "O"){
+                if($item->type == "R"){
+                    $duplo_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $duplo_credito += $item->motante;
+                }
             }
         
-            $credito += $item->credito;
-            $debito += $item->debito;
+            
+            if($item->type == "R"){
+                $debito += $item->motante;
+            }
+                
+            if($item->type == "D"){
+                $credito += $item->motante;
+            }
         }
-        
         
         $multicaixa = $multicaixa_debito - $multicaixa_credito;
         $numerorio = $numerorio_debito - $numerorio_credito;
         $duplo = $duplo_debito - $duplo_credito;
-
+    
         $head = [
             "titulo" => "Fecho caixa",
             "descricao" => env('APP_NAME'),
@@ -1161,49 +1176,58 @@ class CaixaController extends Controller
     } 
 
     public function fechamento_caixa_create(Request $request)
-    {   
+    { 
+        $request->validate([
+            'caixa_id' => 'required',    
+        ], [
+            'caixa_id.required' => 'O caixa é obrigatório.!',
+        ]);
+    
         $user = auth()->user();
         if(!$user->can('fecho do caixa')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
    
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
         
-        $caixaActivo = Caixa::where([
-            ['active', true],
-            ['entidade_id', '=', $entidade->empresa->id],
-            ['status', 'aberto'],
-            ['user_id', '=', Auth::user()->id],
-        ])->first();
+        $caixaActivo = Caixa::findOrFail($request->caixa_id);
 
         if(!$caixaActivo){
-            Alert::error('Erro', 'Verifica se tens um caixa aberto, por favor!');
-            return redirect()->back();
+            return response()->json(['message' => "Verifica se tens um caixa aberto, por favor!"], 404);
         }
         
-        $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-
         $data = date("Y-m-d");
-
-        $movimentos = Movimento::where('entidade_id', $entidade->empresa->id)
-            ->where('subconta_id', $subconta_caixa->id)
-            ->where('user_id', Auth::user()->id)
-            ->with(['user','subconta'])
-            ->where('entidade_id', '=', $entidade->empresa->id)
+        
+        $movimentos = OperacaoFinanceiro::where('entidade_id', $entidade->empresa->id)
+            // ->when($data, function ($query, $value) {
+            //     $query->whereDate('date_at', '>=', Carbon::createFromDate($value));
+            // })
+            // ->when($data, function ($query, $value) {
+            //     $query->whereDate('date_at', '<=', Carbon::createFromDate($value));
+            // })
+            ->where('user_open_id', Auth::user()->id)
+            ->where('code_caixa', $caixaActivo->code_caixa)
+            ->where('status_caixa', 'pendente')
             ->get();
+        
+        foreach($movimentos as $item){
+            $update = OperacaoFinanceiro::findOrFail($item->id);
+            $update->status_caixa = "concluido";
+            $update->update();
+        }
                 
         $statusCaixa = Caixa::findOrFail($caixaActivo->id);
         $statusCaixa->status = "fechado";
         $statusCaixa->active = false;
+        $statusCaixa->user_open_id = NULL;
+        $statusCaixa->user_close_id = Auth::user()->id;
         $caixaActivo->continuar_apos_login = false;
         $statusCaixa->update();
         
         #PAREI AQUI ESTA BEN
         
-        return response()->json(['data_inicio' => $data, 'data_final' => $data, 'caixa_id' => $caixaActivo->id, 'success' => true, 'redirect' => route('relatorio-fechamento-caixa')]);
-
-        // return redirect()->route('relatorio-fechamento-caixa', ['data_inicio' => $data, 'data_final' => $data]);
+        return response()->json(['success' => true, 'redirect' => route('relatorio-fechamento-caixa', ['data_inicio' => $data, 'data_final' => $data, 'caixa_id' => $caixaActivo->id])]);
    
     }  
 
@@ -1225,7 +1249,6 @@ class CaixaController extends Controller
             ['user_id', '=', Auth::user()->id],
         ])->first();
         
-        
         if($caixaActivo){
             $update = Caixa::findOrFail($caixaActivo->id);
             $update->continuar_apos_login = true;
@@ -1246,28 +1269,16 @@ class CaixaController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+        $caixaActivo = Caixa::find($subconta_id);
+        if(!$caixaActivo){
+            return redirect()->back();
+        }
         
-        $data = date("Y-m-d");
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
         
-        $movimentos = Movimento::where('entidade_id', $entidade->empresa->id)
-        ->when($data, function ($query, $value) {
-            $query->whereDate('data_at', '>=', Carbon::createFromDate($value));
-        })
-        ->when($data, function ($query, $value) {
-            $query->whereDate('data_at', '<=', Carbon::createFromDate($value));
-        })
-        ->where('subconta_id', $subconta_id)
-        ->where('user_id', Auth::user()->id)
-        ->with(['user','subconta'])
-        ->where('entidade_id', '=', $entidade->empresa->id)
-        ->get();
-        
-        $subconta = Subconta::find($subconta_id);
-                        
         $credito = 0;
         $debito = 0;
-        
+                     
         $multicaixa = 0;
         $multicaixa_credito = 0;
         $multicaixa_debito = 0;
@@ -1279,31 +1290,59 @@ class CaixaController extends Controller
         $duplo = 0;
         $duplo_credito = 0;
         $duplo_debito = 0;
-            
-        foreach($movimentos as $item){
-            
-            if($item->forma_movimento == "NU"){
-                $numerorio_credito += $item->credito;
-                $numerorio_debito += $item->debito;
-            }
-            
-            if($item->forma_movimento == "MB"){
-                $multicaixa_credito += $item->credito;
-                $multicaixa_debito += $item->debito;
-            }
-            
-            if($item->forma_movimento == "OU"){
-                $duplo_credito += $item->credito;
-                $duplo_debito += $item->debito;
-            }
+      
+        $subconta_caixa = Caixa::findOrFail($caixaActivo->id);
         
-            $credito += $item->credito;
-            $debito += $item->debito;
+        $movimentos = OperacaoFinanceiro::where('entidade_id', $entidade->empresa->id)
+        // ->when($data_inicio, function ($query, $value) {
+        //     $query->whereDate('date_at', '>=', Carbon::createFromDate($value));
+        // })
+        // ->when($data_final, function ($query, $value) {
+        //     $query->whereDate('date_at', '<=', Carbon::createFromDate($value));
+        // })
+        // ->where('user_id', Auth::user()->id)
+        ->where('code_caixa', $caixaActivo->code_caixa)
+        ->where('status_caixa', 'concluido')
+        ->get();
+        
+        foreach($movimentos as $item){
+            if($item->formas == "C"){
+                if($item->type == "R"){
+                    $numerorio_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $numerorio_credito += $item->motante;
+                }
+            }
+            if($item->formas == "B"){
+            
+                if($item->type == "R"){
+                    $multicaixa_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $multicaixa_credito += $item->motante;
+                }
+            }
+            if($item->formas == "O"){
+                if($item->type == "R"){
+                    $duplo_debito += $item->motante;
+                }
+                if($item->type == "D"){
+                    $duplo_credito += $item->motante;
+                }
+            }
+            if($item->type == "R"){
+                $debito += $item->motante;
+            }
+            if($item->type == "D"){
+                $credito += $item->motante;
+            }
         }
-                
+        
         $multicaixa = $multicaixa_debito - $multicaixa_credito;
         $numerorio = $numerorio_debito - $numerorio_credito;
         $duplo = $duplo_debito - $duplo_credito;
+  
 
         $head = [
             "titulo" => "Fecho caixa",
@@ -1313,7 +1352,7 @@ class CaixaController extends Controller
             ->get(),
             "empresa" => Entidade::findOrFail($entidade->empresa->id),
             
-            "subconta" => $subconta,
+            "subconta" => $subconta_caixa,
             "data_inicio" => $data_inicio,
             "data_final" => $data_final,
             
@@ -1330,7 +1369,6 @@ class CaixaController extends Controller
             "numerorio_debito" => $numerorio_debito,
             "duplo_credito" => $duplo_credito,
             "duplo_debito" => $duplo_debito,
-            
             
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];

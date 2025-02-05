@@ -22,7 +22,6 @@ class SubsidioController extends Controller
     public function index()
     {
         //
-        //
         $user = auth()->user();
 
         if(!$user->can('listar subsidio')){
@@ -119,7 +118,8 @@ class SubsidioController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
 
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+          
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
    
     }
 
@@ -226,7 +226,8 @@ class SubsidioController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+          
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
        
     }
 
@@ -243,14 +244,27 @@ class SubsidioController extends Controller
         if(!$user->can('eliminar subsidio')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
+        }        
+        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui  
+            $subsidio = Subsidio::findOrFail($id);
+            $subsidio->delete();
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        $subsidio = Subsidio::findOrFail($id);
-        if($subsidio->delete()){
-            return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Excluir subsidio");
-        }
+      
+        return response()->json(['success' => true, 'message' => "Dados Excluído com sucesso!"], 200);
+        
     }
 
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\app;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banco;
+use App\Models\Caixa;
 use App\Models\ContaBancaria;
 use App\Models\Conta;
 use App\Models\Entidade;
@@ -15,11 +16,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
-
+use App\Http\Controllers\TraitHelpers;
+use App\Models\OperacaoFinanceiro;
 use PDF;
 
 class ContaBancariaController extends Controller
 {
+
+    use TraitHelpers;
     /**
      * Display a listing of the resource.
      *
@@ -489,7 +493,7 @@ class ContaBancariaController extends Controller
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];
 
-        return view('dashboard.bancos.abertura', $head);
+        return view('dashboard.contas-bancarias.abertura', $head);
     }
 
     public function abertura_bancos_create(Request $request)
@@ -501,8 +505,7 @@ class ContaBancariaController extends Controller
         //     Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         //     return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         // }
-        
-        
+     
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
         $request->validate([
@@ -513,82 +516,84 @@ class ContaBancariaController extends Controller
             'banco_id.required' => 'O banco é um campo obrigatório',
         ]);
         
-        $bancoActivo = ContaBancaria::with(['banco'])->findOrFail($request->banco_id);
-
-        $create = MovimentoBanco::create([
-            'user_id' => Auth::user()->id,
-            'banco_id' => $bancoActivo->id,
-            'status' => true,
-            'data_abertura' => date("Y-m-d"),
-            'hora_abertura' => date("h:i:s"),
-            'valor_abertura' => $request->valor,
-            'entidade_id' => $entidade->empresa->id,
-            'user_fecho' => NULL,
-            'hora_fecho' => NULL,
-            'data_fecho' => NULL,
-            'valor_valor_fecho' => 0,
-        ]);
-
-        if($create->save()){
-        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+           
+            $caixaActivo = Caixa::where([
+                ['active', true],
+                ['status', '=', 'aberto'],
+                ['user_id', '=', Auth::user()->id],
+                ['entidade_id', '=', $entidade->empresa->id], 
+            ])->first();
+            
+            if(!$caixaActivo){
+                return response()->json(['message' => 'Por favor, não podes realizar nenhuma activação de TPA sem antes abrir o caixa!'], 404);
+            }  
+            
+            $bancoActivo = ContaBancaria::with(['banco'])->findOrFail($request->banco_id);
+            $code = uniqid(time());
+            $cliente = NULL;
+            
+           $this->registra_operacoes(
+                $request->valor, // valor da operação
+                $bancoActivo->id, // conta a ser movimentada EX: caixa / banco ou qualquer outra conta da contabilidade
+                $cliente, // cliente que 
+                "R", // tipo de operação se é receita ou dispesa
+                "pago",  // Status da operação se esta paga ou não
+                $code, // code => rash para esta operação
+                "E", // tipo de movimento se em Entrada ou saída
+                date("Y-m-d"), // data da operação
+                $entidade->empresa->id, // empresa que esta a fazer a operação
+                "Saldo Inicial - Abertura TPA (Entrada de Valores)",
+                Auth::user()->id,
+                'pendente', 
+                "B", // forma de entrada ou saída de valores Ex: Multicaixa ou Cash
+                $caixaActivo->code_caixa, // code que identifica o caixa que esta operar,
+            );
+                  
             $bancoActivo->status = "aberto";
             $bancoActivo->active = true;
-            $bancoActivo->user_id = Auth::user()->id;
+            $bancoActivo->user_open_id = Auth::user()->id;
             $bancoActivo->update();
-           
-            Alert::success('Sucesso!', 'TPA Aberto com sucesso!');
-            return redirect()->route('pronto-venda');
-        }else{
-            Alert::error('Erro!', 'Ocorreu um erro ao Abrir o TPA!');
-            return redirect()->route('pronto-venda');
+            
+           // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['message' => "Operação realizado com sucesso.!", 'success' => true, 'redirect' => route('pronto-venda')]);
 
     }
         
     // feachamento do TPA
-    public function fechamento_bancos()
+    public function fechamento_bancos($id = null)
     {
         $user = auth()->user();
         
-        // if(!$user->can('fecho do caixa')){
-        //     Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
-        //     return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
-        // }
-        
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
-    
-        $bancoActivo = ContaBancaria::where([
-            ['active', true],
-            ['user_id', '=', Auth::user()->id],
-            ['entidade_id', '=', $entidade->empresa->id], 
-        ])->first();
-        
-        if($bancoActivo){
-            $movimentoActivo = MovimentoBanco::where([
-                ['user_id','=', Auth::user()->id],
-                ['banco_id','=', $bancoActivo->id],
-                ['entidade_id', '=', $entidade->empresa->id], 
-                ['status', true],
-            ])->first();
-           
-            if(empty($movimentoActivo)){
-                Alert::error('Erro', 'Não Existe TPA para fechar');
-                return redirect()->back();
-            }        
-        }else{
-            Alert::error('Erro', 'Não Existe TPA para fechar');
-            return redirect()->back();        
+        $bancoActivo = ContaBancaria::find($id);
+        if(!$bancoActivo){
+            return response()->json(['message' => 'Verificar a conta bancária (TPA) que pretendes fechar, por favor'], 404);
         }
+        
+        if($bancoActivo->status == "fechado" && $bancoActivo->active == false){
+            return redirect()->route('dashboard');
+        }
+        
+        $bancoActivo->status = "fechado";
+        $bancoActivo->active = false;
+        $bancoActivo->user_open_id = NULL;
+        $bancoActivo->user_close_id =Auth::user()->id;
+        $bancoActivo->update();
+        
+        return response()->json(['message' => "Conta bancária(TPA) desactivo com sucesso.!"], 404);
 
-        $head = [
-            "titulo" => "Fecho TPA",
-            "descricao" => env('APP_NAME'),
-            "empresa" => Entidade::findOrFail($entidade->empresa->id),
-            "movimento" => $movimentoActivo,
-            "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
-        ];
-
-        return view('dashboard.bancos.fecho', $head);
     } 
 
     public function fechamento_bancos_create(Request $request)
@@ -616,47 +621,12 @@ class ContaBancariaController extends Controller
         ])->first();
         
         if($bancoActivo){
-
-            $movimento = MovimentoBanco::where([
-                ['user_id', '=', Auth::user()->id],
-                ['banco_id', '=', $bancoActivo->id],
-                ['entidade_id', '=', $entidade->empresa->id],
-                ['status', true],
-            ])->first();
-            
-            if($movimento){
-                
-                $saldo_final = ($movimento->valor_abertura + $movimento->valor_entrada + $movimento->valor_total) - $movimento->valor_saida;
-                
-                $request->valor = (double)$request->valor;
-               
-                if($saldo_final !== $request->valor){
-                    Alert::error('Erro', 'Saldo Informado é inferior do saldo que o sistema processou');
-                    return redirect()->back();  
-                }
-            
-                $check =  MovimentoBanco::findOrFail($movimento->id);
-                $check->user_fecho = Auth::user()->id;
-                $check->hora_fecho = date("h:i:s");
-                $check->data_fecho = date("Y-m-d");
-                $check->valor_valor_fecho = $saldo_final;
-                $check->status = false;
-                $check->update();
-    
-                $statusBanco = ContaBancaria::with(['banco'])->findOrFail($bancoActivo->id);
-                $statusBanco->status = "fechado";
-                $statusBanco->active = false;
-                $statusBanco->update();
-                    
-                Alert::success('Sucesso!', 'banco Fechada com sucesso!');
-                return redirect()->route('contas-bancarias.relatorio-fechamento', $movimento->id);
-            }else {
-                Alert::error('Erro', 'Aconteceu um erro ao fechar o banco');
-                return redirect()->back();
-            }
-    
-            Alert::success('Sucesso!', 'banco Fechada com sucesso!');
-            return redirect()->route('contas-bancarias.relatorio-fechamento', $movimento->id);
+            $statusBanco = ContaBancaria::with(['banco'])->findOrFail($bancoActivo->id);
+            $statusBanco->status = "fechado";
+            $statusBanco->active = false;
+            $statusBanco->user_open_id = NULL;
+            $statusBanco->user_close_id =Auth::user()->id;
+            $statusBanco->update();
         }else{
             Alert::error('Erro', 'Aconteceu um erro ao fechar o banco');
             return redirect()->back();    
@@ -686,7 +656,7 @@ class ContaBancariaController extends Controller
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];
                 
-        $pdf = PDF::loadView('dashboard.bancos.relatorio-fecho', $head);
+        $pdf = PDF::loadView('dashboard.contas-bancarias.relatorio-fecho', $head);
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->stream();
@@ -760,7 +730,7 @@ class ContaBancariaController extends Controller
         ];
         
 
-        return view('dashboard.bancos.detalhe', $head);
+        return view('dashboard.contas-bancarias.detalhe', $head);
     }
     
     public function movimentos_banco(Request $request)
@@ -814,7 +784,7 @@ class ContaBancariaController extends Controller
         
         if($request->documento_pdf === "exportar_pdf"){
         
-            $pdf = PDF::loadView('dashboard.bancos.movimentos-pdf', $head);
+            $pdf = PDF::loadView('dashboard.contas-bancarias.movimentos-pdf', $head);
             $pdf->setPaper('A4', 'portrait');
     
             return $pdf->stream();
@@ -841,7 +811,7 @@ class ContaBancariaController extends Controller
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];    
     
-        $pdf = PDF::loadView('dashboard.bancos.movimentos-detalhe-pdf', $head);
+        $pdf = PDF::loadView('dashboard.contas-bancarias.movimentos-detalhe-pdf', $head);
         $pdf->setPaper('A4', 'portrait');
         
         return $pdf->stream();

@@ -50,7 +50,6 @@ class FacturasController extends Controller
      */
     public function index(Request $request)
     {
-            
         $user = auth()->user();
         
         if(!$user->can('listar facturas')){
@@ -78,8 +77,7 @@ class FacturasController extends Controller
         ])
         ->orderby('created_at', 'desc')
         ->get();
-        
-        //
+       
         $head = [
             "titulo" => "Facturas",
             "descricao" => env('APP_NAME'),
@@ -201,14 +199,20 @@ class FacturasController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-          
                 
         try {
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
             
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
-                    
+            
+            $caixaActivo = Caixa::where([
+                ['active', true],
+                ['status', '=', 'aberto'],
+                ['user_id', '=', Auth::user()->id],
+                ['entidade_id', '=', $entidade->empresa->id], 
+            ])->first();
+            
             $movimentos = Itens_venda::where('code', NULL)
                 ->where('entidade_id', '=', $entidade->empresa->id)
                 ->where('status', '=', 'processo')
@@ -225,23 +229,32 @@ class FacturasController extends Controller
         
             $subconta_cliente = Subconta::where('code', $cliente->code)->first();
            
-            // registro contabilisticos
+            $contarFactura = Venda::where([
+                ['factura', '=', $request->factura],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
+                ['entidade_id', '=', $entidade->empresa->id],
+            ])->count();
+            
+            $numeroFactura = $contarFactura + 1;
+                 
+            $codigo_designacao_factura = "{$request->factura} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
+           
             if($request->factura == "FR"){
             
+                if($request->observacao == null || $request->observacao == ""){
+                    $request->observacao = "Pagamento referente a factura: {$codigo_designacao_factura}";
+                }
+                
                 if($request->forma_de_pagamento == null){
                     return response()->json(['message' => 'Por ser uma factura recibo, precisas escolar a forma de pagamento, isto em pagamentos!'], 404);
                 }
-                
+          
                 if($request->forma_de_pagamento == "NU"){
                 
                     if($request->caixa_id == ""){
                         return response()->json(['message' => 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!'], 404);
                     } 
-                    
-                    if($request->observacao == null || $request->observacao == ""){
-                        $request->observacao = "Pagamento de prestação e Venda de produto";
-                    }
-                    
+                   
                     $valor_cash = $request->valor_entregue;
                     $valor_multicaixa = 0;
                     $request->total_pagar = $request->valor_entregue;
@@ -258,12 +271,11 @@ class FacturasController extends Controller
                         $subconta_caixa = Caixa::where('code', $request->caixa_id)->first();
                     }
                     
-                    $this->registra_operacoes($request->total_pagar, $subconta_caixa->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao);
+                    $this->registra_operacoes($request->total_pagar, $subconta_caixa->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao, Auth::user()->id, 'pendente', "C",  $caixaActivo->code_caixa ?? NULL);
                               
                 }
                 
                 if($request->forma_de_pagamento == "MB" || $request->forma_de_pagamento == "TE" || $request->forma_de_pagamento == "DE"){
-                      
                     
                     if($request->banco_id == ""){
                         return response()->json(['message' => 'Deves selecionar o banco onde será retirado o valor para o pagamento da factura!'], 404);
@@ -274,7 +286,6 @@ class FacturasController extends Controller
                     $valor_multicaixa = $request->valor_entregue_multicaixa;
                     $request->total_pagar = $request->valor_entregue_multicaixa;
                     
-                    
                     if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
                         $subconta_banco = Subconta::where('code', $request->banco_id)->first();
                         #VAMOS DEBITAR NO BANCO OU SEJA VAMOS TIRAR O DINHEIRO DO BANCO SELECIONADO
@@ -282,10 +293,9 @@ class FacturasController extends Controller
                         $this->registra_movimentos($subconta_cliente->id, $code, $request->observacao, $request->data_emissao, $entidade->empresa->id, "S", $request->total_pagar, 0);
                         
                     }  else {
-                        $subconta_banco = ContaBancaria::where('code', $request->caixa_id)->first();
+                        $subconta_banco = ContaBancaria::where('code', $request->banco_id)->first();
                     }
-                    
-                    $this->registra_operacoes($request->total_pagar, $subconta_banco->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao);
+                    $this->registra_operacoes($request->total_pagar, $subconta_banco->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao, Auth::user()->id, "pendente", "B", $caixaActivo->code_caixa ?? NULL);
                     
                     ## CREDITAR CLEINTE
                     
@@ -296,7 +306,6 @@ class FacturasController extends Controller
                         return response()->json(['message' => 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!'], 404);
                         // return redirect()->back()->with('danger', 'Deves selecionar o caixa onde será retirado o valor para o pagamento da factura!');
                     }
-                    
               
                     $valor_cash =  $request->valor_entregue;
                     $valor_multicaixa = $request->valor_entregue_multicaixa_input;
@@ -313,7 +322,7 @@ class FacturasController extends Controller
                         $subconta_caixa = Caixa::where('code', $request->caixa_id)->first();
                     }
                     
-                    $this->registra_operacoes($request->valor_entregue, $subconta_caixa->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao ?? "Lancamento");
+                    $this->registra_operacoes($request->valor_entregue, $subconta_caixa->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao ?? "Lancamento", Auth::user()->id, "pendente", "C", $caixaActivo->code_caixa ?? NULL);
                                          
                     if($request->banco_id == ""){
                         // return redirect()->back()->with('danger', 'Deves selecionar o banco onde será retirado o valor para o pagamento da factura!');
@@ -328,21 +337,15 @@ class FacturasController extends Controller
                         ## CREDITAR CLEINTE
                         $this->registra_movimentos($subconta_cliente->id, $code, $request->observacao, $request->data_emissao, $entidade->empresa->id, "S", $request->valor_entregue_multicaixa, 0);
                     } else {
-                        $subconta_banco = ContaBancaria::where('code', $request->caixa_id)->first();
+                        $subconta_banco = ContaBancaria::where('code', $request->banco_id)->first();
                     }
                     
-                    $this->registra_operacoes($request->valor_entregue_multicaixa, $subconta_caixa->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao);
+                    $this->registra_operacoes($request->valor_entregue_multicaixa, $subconta_banco->id, $cliente->id, "R", 'pago', $code, "E", $request->data_emissao, $entidade->empresa->id, $request->observacao, Auth::user()->id, "pendente", "B", $caixaActivo->code_caixa ?? NULL);
                 }
                 
             }else {
                 $request->forma_de_pagamento = "NU";
             }
-        
-            $contarFactura = Venda::where([
-                ['factura', '=', $request->factura],
-                ['ano_factura', '=', $entidade->empresa->ano_factura],
-                ['entidade_id', '=', $entidade->empresa->id],
-            ])->count();
             
             $ultimoRecibo = Venda::where([
                 ['factura', '=', $request->factura],
@@ -379,9 +382,7 @@ class FacturasController extends Controller
             
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', $request->data_emissao);
-        
-            $numeroFactura = $contarFactura + 1;
-    
+            
             $rsa = new RSA(); //Algoritimo RSA
     
             $privatekey = $this->pegarChavePrivada();
@@ -389,9 +390,7 @@ class FacturasController extends Controller
     
             // Lendo a private key
             $rsa->loadKey($privatekey);
-                
-            $codigo_designacao_factura = "{$request->factura} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
-    
+           
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
@@ -408,7 +407,6 @@ class FacturasController extends Controller
     
             // Lendo a public key
             $rsa->loadKey($publickey);
-            
     
             $request->data_vencimento = date('Y-m-d', strtotime($request->data_emissao. ' + ' . $dias .' days'));
             
@@ -820,34 +818,25 @@ class FacturasController extends Controller
                     Alert::warning('Atenção', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto. Por favor activa uma loja/armazém que tem este produto!');
                     return redirect()->back()->with('warning', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto.');
                 }
+                                           
+                $gestao_quantidade = Estoque::where('loja_id', $loja->id)
+                    ->where('produto_id', $produto->id)
+                    ->where('stock', '>', 1)
+                    ->where('entidade_id', $entidade->empresa->id)
+                    ->first();
+                    
+                $verificar_quantidade = (int) $produto->total_produto_loja_activa();
                 
-                // verificar quantidade de produto no estoque da loja
-                $verificar_quantidade = Estoque::where('loja_id', $loja->id)
-                ->where('produto_id', $produto->id)
-                ->where('entidade_id', $entidade->empresa->id)
-                ->sum('stock');
-                
-                $stock_gestao = Estoque::where('loja_id', $loja->id)
-                ->where('produto_id', $produto->id)
-                ->where('entidade_id', $entidade->empresa->id)
-                ->first();
-                
-                $verificar_quantidade = (int) $verificar_quantidade;
-                            
                 if($verificar_quantidade <= 0){
                     Alert::warning('Atenção', 'A Loja activa não têm este produto em stock para poder comercializar!');
                     return redirect()->back()->with('warning', 'A Loja activa não têm este produto em stock para poder comercializar!');
                 }
-                
-                if($produto->estoque){
-                    if($verificar_quantidade <= $produto->estoque->stock_minimo){
-                        Alert::warning('Atenção', 'A quantidade deste produto em estoque está abaixo do limite crítico, impedindo a venda no momento.');
-                        return redirect()->back();
-                    }       
-                }else{
+                               
+                if($verificar_quantidade <= $produto->total_produto_minimo_loja_activa()){
                     Alert::warning('Atenção', 'A quantidade deste produto em estoque está abaixo do limite crítico, impedindo a venda no momento.');
                     return redirect()->back();
-                } 
+                }       
+             
                 
                 Registro::create([
                     "registro" => "Saída de Stock",
@@ -860,7 +849,6 @@ class FacturasController extends Controller
                     "user_id" => Auth::user()->id,
                     'entidade_id' => $entidade->empresa->id,
                 ]);
-                
             }
     
     
@@ -882,18 +870,10 @@ class FacturasController extends Controller
                 $update_item = Itens_venda::findOrFail($verificarProdutoAdicionado->id);
                 
                 // Verifica se os dados estão corretos
-                if (!$produto || !$produto->estoque) {
-                    throw new \Exception('Dados do produto ou estoque não encontrados.');
-                }
-                if ($produto->tipo == 'P' && $produto->estoque->stock <= 0) {
+                if ($produto->tipo == 'P' && $produto->total_produto_loja_activa() <= $produto->total_produto_minimo_loja_activa()) {
                     throw new \Exception('Estoque insuficiente.');
                 }
-                
-                // $update_item->update([
-                
-                // ]);
-                
-                
+                              
                 $newQuantid = $update_item->quantidade + 1;
                 
                 $desconto = ($produto->preco * $newQuantid) * (($update_item->desconto_aplicado ?? 0) / 100);
@@ -924,15 +904,17 @@ class FacturasController extends Controller
                 $update_item->valor_iva = $valorIva;
                 $update_item->save();
                 
-                  // Atualiza o estoque
+                // Atualiza o estoque
                 if ($produto->tipo == 'P') {
-                    $stock = Estoque::find($stock_gestao->id);
-                    if($stock){
-                       $stock->stock =  $stock->stock - 1; 
-                       $stock->update(); 
+                    
+                    $update_gestao_quantidade = Estoque::find($gestao_quantidade->id);
+                    
+                    if($update_gestao_quantidade){
+                        $update_gestao_quantidade->stock = $update_gestao_quantidade->stock - 1; 
+                        $update_gestao_quantidade->update(); 
                     }
+                    
                 }
-                
                 
                 return redirect()->route('facturas.create');
             }else{
@@ -945,7 +927,7 @@ class FacturasController extends Controller
                 }else {
                     $retencao_fonte = 0;
                 }
-            
+         
                 Itens_venda::create(
                     [
                         'produto_id' => $produto->id,
@@ -970,11 +952,10 @@ class FacturasController extends Controller
                 );  
                 
                 if($produto->tipo == 'P'){
-                    
-                    $stock = Estoque::find($stock_gestao->id);
-                    if($stock){
-                       $stock->stock =  $stock->stock - 1; 
-                       $stock->update(); 
+                    $update_gestao_quantidade = Estoque::find($gestao_quantidade->id);
+                    if($update_gestao_quantidade){
+                        $update_gestao_quantidade->stock = $update_gestao_quantidade->stock - 1; 
+                        $update_gestao_quantidade->update(); 
                     }
                 }
              
@@ -1163,7 +1144,7 @@ class FacturasController extends Controller
                     ['entidade_id', '=', $entidade->empresa->id], 
                     ['factura', '=', $request->factura],
                     ['user_id', '=', Auth::user()->id],
-                    ['ano_factura', '=', date("Y")],
+                    ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ])->count();
             }else{
                 $contarFacturaNovo = 0;
@@ -1261,13 +1242,13 @@ class FacturasController extends Controller
             // criar nota de credito
             $contarFactura = NotaCredito::where([
                 ['factura', '=', 'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id], 
             ])->count();
     
             $ultimoRecibo = NotaCredito::where([
                 ['factura', '=',  'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -1282,7 +1263,6 @@ class FacturasController extends Controller
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            $ano = date("Y");
             $numeroFactura = $contarFactura + 1;
     
             $rsa = new RSA(); //Algoritimo RSA
@@ -1293,13 +1273,13 @@ class FacturasController extends Controller
             // Lendo a private key
             $rsa->loadKey($privatekey);
             
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
-    
+            $codigo_designacao_factura = "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
+               
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
     
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$codigo_designacao_factura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
             // HASH
             $hash = 'sha1'; // Tipo de Hash
             $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
@@ -1334,7 +1314,7 @@ class FacturasController extends Controller
                 'pagamento' => $venda->pagamento,
                 'factura' => 'NC',
                 'codigo_factura' =>  $numeroFactura,
-                'factura_next' => "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
+                'factura_next' => "{$codigo_designacao_factura}",
                 'ano_factura' => date('Y'),
                 'desconto' => $venda->desconto,
     
@@ -1397,7 +1377,7 @@ class FacturasController extends Controller
     
             $ultimoRecibo = Venda::where([
                 ['factura', '=',  $request->factura],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -1412,7 +1392,6 @@ class FacturasController extends Controller
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            $ano = date("Y");
             $numeroFactura = $contarFacturaNovo + 1;
     
            
@@ -1423,12 +1402,14 @@ class FacturasController extends Controller
     
             // Lendo a private key
             $rsa->loadKey($privatekey);
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
+            
+            $codigo_designacao_factura = "{$request->factura} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
+             
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
     
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->factura} {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($request->total_pagar, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$codigo_designacao_factura}" . ';' . number_format($request->total_pagar, 2, ".", "") . ';' . $hashAnterior;
             // HASH
             $hash = 'sha1'; // Tipo de Hash
             $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
@@ -1484,7 +1465,7 @@ class FacturasController extends Controller
             $venda->desconto = $request->desconto;
             $venda->pagamento = $request->forma_pagamento;
             $venda->factura = $request->factura;
-            $venda->factura_next = "{$request->factura} {$codigo_designacao_factura}{$anoNovo}/{$numeroFacturaNovo}";
+            $venda->factura_next = "{$codigo_designacao_factura}";
             $venda->observacao = $request->observacao;
             $venda->referencia = $request->referencia;
             $venda->retificado  = 'Y';
@@ -1644,7 +1625,7 @@ class FacturasController extends Controller
                 ['entidade_id', '=', $entidade->empresa->id], 
                 ['factura', '=', $request->factura],
                 ['user_id', '=', Auth::user()->id],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
             ])->count();
         }else{
             $contarFacturaNovo = 0;
@@ -1656,13 +1637,13 @@ class FacturasController extends Controller
             // criar nota de credito
             $contarFactura = Recibo::where([
                 ['factura', '=', 'RG'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id], 
             ])->count();
 
             $ultimoRecibo = Recibo::where([
                 ['factura', '=',  'RG'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -1677,7 +1658,6 @@ class FacturasController extends Controller
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
 
-            $ano = date("Y");
             $numeroFactura = $contarFactura + 1;
 
             $rsa = new RSA(); //Algoritimo RSA
@@ -1688,12 +1668,11 @@ class FacturasController extends Controller
             // Lendo a private key
             $rsa->loadKey($privatekey);
             
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
 
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "RG {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "RG {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
             // HASH
             $hash = 'sha1'; // Tipo de Hash
             $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
@@ -1729,8 +1708,8 @@ class FacturasController extends Controller
                 'pagamento' => $venda->pagamento,
                 'factura' => 'RG',
                 'codigo_factura' =>  $numeroFactura,
-                'factura_next' => "RG {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
-                'ano_factura' => date('Y'),
+                'factura_next' => "RG {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}",
+                'ano_factura' => $entidade->empresa->ano_factura,
                 'desconto' => $venda->desconto,
 
                 'retificado' => $venda->retificado,
@@ -1806,13 +1785,13 @@ class FacturasController extends Controller
             // criar nota de credito
             $contarFactura = NotaCredito::where([
                 ['factura', '=', 'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id], 
             ])->count();
     
             $ultimoRecibo = NotaCredito::where([
                 ['factura', '=',  'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -1827,7 +1806,6 @@ class FacturasController extends Controller
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            $ano = date("Y");
             $numeroFactura = $contarFactura + 1;
     
             $rsa = new RSA(); //Algoritimo RSA
@@ -1837,12 +1815,11 @@ class FacturasController extends Controller
     
             // Lendo a private key
             $rsa->loadKey($privatekey);
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
     
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}" . ';' . number_format($venda->valor_total, 2, ".", "") . ';' . $hashAnterior;
             // HASH
             $hash = 'sha1'; // Tipo de Hash
             $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
@@ -1877,8 +1854,8 @@ class FacturasController extends Controller
                 'pagamento' => $venda->pagamento,
                 'factura' => 'NC',
                 'codigo_factura' =>  $numeroFactura,
-                'factura_next' => "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
-                'ano_factura' => date('Y'),
+                'factura_next' => "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}",
+                'ano_factura' => $entidade->empresa->ano_factura,
                 'desconto' => $venda->desconto,
     
                 'retificado' => $venda->retificado,
@@ -2114,6 +2091,7 @@ class FacturasController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "Pagamento da factura referente {$venda->factura_next}",
                     'status' => "pago",
+                    'formas' => "C",
                     'motante' => $request->total_pagar,
                     'subconta_id' => $subconta_caixa->id,
                     'cliente_id' => $cliente->id,
@@ -2184,6 +2162,7 @@ class FacturasController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "Pagamento da factura referente {$venda->factura_next}",
                     'status' => "pago",
+                    'formas' => "B",
                     'motante' => $request->total_pagar,
                     'subconta_id' => $subconta_banco->id,
                     'cliente_id' => $cliente->id,
@@ -2255,6 +2234,7 @@ class FacturasController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "Pagamento da factura referente {$venda->factura_next}",
                     'status' => "pago",
+                    'formas' => "C",
                     'motante' => $request->valor_entregue_input,
                     'subconta_id' => $subconta_caixa->id,
                     'cliente_id' => $cliente->id,
@@ -2317,6 +2297,7 @@ class FacturasController extends Controller
                 OperacaoFinanceiro::create([
                     'nome' => "Pagamento da factura referente {$venda->factura_next}",
                     'status' => "pago",
+                    'formas' => "B",
                     'motante' => $request->valor_entregue_multicaixa_input,
                     'subconta_id' => $subconta_banco->id,
                     'cliente_id' => $cliente->id,
@@ -2578,13 +2559,13 @@ class FacturasController extends Controller
             // criar nota de credito
             $contarFactura = NotaCredito::where([
                 ['factura', '=', 'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id], 
             ])->count();
     
             $ultimoRecibo = NotaCredito::where([
                 ['factura', '=',  'NC'],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -2601,7 +2582,6 @@ class FacturasController extends Controller
     
             // $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            $ano = date("Y");
             $numeroFactura = $contarFactura + 1;
     
             $rsa = new RSA(); //Algoritimo RSA
@@ -2616,7 +2596,7 @@ class FacturasController extends Controller
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
     
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($factura->valor_total, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}" . ';' . number_format($factura->valor_total, 2, ".", "") . ';' . $hashAnterior;
             // HASH
             $hash = 'sha1'; // Tipo de Hash
             $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
@@ -2650,8 +2630,8 @@ class FacturasController extends Controller
                 'pagamento' => $factura->pagamento,
                 'factura' => 'NC',
                 'codigo_factura' =>  $numeroFactura,
-                'factura_next' => "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
-                'ano_factura' => date('Y'),
+                'factura_next' => "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}",
+                'ano_factura' => $entidade->empresa->ano_factura,
                 'desconto' => $factura->desconto,
     
                 'retificado' => $factura->retificado,
@@ -2737,7 +2717,7 @@ class FacturasController extends Controller
                 }
             }
     
-            $factura->numeracao_proforma = "NC {$codigo_designacao_factura}{$ano}/{$numeroFactura}";
+            $factura->numeracao_proforma = "NC {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
             $factura->anulado = "Y";
             $factura->status_venda = "anulada";
             $factura->status_factura = "anulada";

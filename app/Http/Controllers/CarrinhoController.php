@@ -8,12 +8,10 @@ use App\Models\Cliente;
 use App\Models\Entidade;
 use App\Models\Estoque;
 use App\Models\Itens_venda;
-use App\Models\TipoPagamento;
 use App\Models\Loja;
 use App\Models\Mesa;
 use App\Models\Movimento;
 use App\Models\Quarto;
-use App\Models\MovimentoCaixa;
 use App\Models\OperacaoFinanceiro;
 use App\Models\Produto;
 use App\Models\Registro;
@@ -81,7 +79,6 @@ class CarrinhoController extends Controller
         return response()->json(['carrinho' => $carrinho, 'total' => $total, 'message' => 'Produto adicionado ao carrinho com sucesso!']);
     }
     
-    
     // Adiciona um produto ao carrinho
     public function codigo_barra(Request $request)
     {
@@ -126,8 +123,6 @@ class CarrinhoController extends Controller
         // Retorna o carrinho atualizado como resposta JSON
         return response()->json([ 'success' => true, 'carrinho' => $carrinho, 'total' => $total, 'message' => 'Produto adicionado ao carrinho com sucesso!']);
         
-       
-        
     }
 
     // Remove um produto do carrinho
@@ -161,14 +156,12 @@ class CarrinhoController extends Controller
             ['entidade_id', '=', $entidade->empresa->id], 
         ])->first();
         
-        
         if(!$caixaActivo){
             return response()->json(['error' => 'Por favor, não podes realizar nenhuma venda sem antes abrir o caixa!'], 400);
         }    
         
         $cliente = Cliente::findOrFail($request['clienteId']);
         $subconta_cliente = Subconta::where('code', $cliente->code)->first();
-        
                 
         $code = uniqid(time());
                     
@@ -177,11 +170,8 @@ class CarrinhoController extends Controller
             // Realizar operações de banco de dados aqui
       
             $carrinho = Session::get('carrinho', []);
-            $total = $this->calcularTotal($carrinho);
-            
             
             foreach ($carrinho as $key => $car) {
-                
                 
                 $produto = Produto::with('marca','variacao','categoria', 'estoque')->findOrFail($car['produto_id']);   
                 
@@ -200,23 +190,22 @@ class CarrinhoController extends Controller
                 // verificar quantidade de produto no estoque da loja
                 $verificar_quantidade = Estoque::where('loja_id', $loja->id)
                     ->where('produto_id', $produto->id)
+                    ->where('stock', '>', 1)
                     ->where('entidade_id', $entidade->empresa->id)
                     ->sum('stock');
+                    
+                $gestao_quantidade = Estoque::where('loja_id', $loja->id)
+                    ->where('produto_id', $produto->id)
+                    ->where('stock', '>', 1)
+                    ->where('entidade_id', $entidade->empresa->id)
+                    ->first();
                 
                 $verificar_quantidade = (int) $verificar_quantidade;
                 
                 if($verificar_quantidade <= 0){
                     return response()->json(['error' => 'A Loja activa não têm este produto em stock para poder comercializar!'], 400);
                 }
-                
-                if($produto->estoque){
-                    if($produto->estoque->stock <= $produto->estoque->stock_minimo){
-                        return response()->json(['error' => 'A quantidade deste produto em estoque está abaixo do limite crítico, impedindo a venda no momento!'], 400);
-                    }       
-                }else{
-                    return response()->json(['error' => 'A quantidade deste produto em estoque está abaixo do limite crítico, impedindo a venda no momento!'], 400);
-                }            
-                    
+             
                 Registro::create([
                     "registro" => "Saída de Stock",
                     "data_registro" => date('Y-m-d'),
@@ -240,7 +229,6 @@ class CarrinhoController extends Controller
                 }
                     
                 if( $status_uso == "CAIXA"){
-                        
                     $verificarProdutoAdicionado = Itens_venda::where([
                         ['status', '=', 'processo'],
                         ['produto_id', '=', $produto->id],
@@ -250,11 +238,9 @@ class CarrinhoController extends Controller
                         ['entidade_id', '=', $entidade->empresa->id], 
                         ['user_id', '=', Auth::user()->id], 
                     ])->first();
-                    
                 }
                 
                 if($status_uso == "MESA"){
-                
                     $verificarProdutoAdicionado = Itens_venda::where([
                         ['status', '=', 'processo'],
                         ['produto_id', '=', $produto->id],
@@ -263,7 +249,6 @@ class CarrinhoController extends Controller
                         ['entidade_id', '=', $entidade->empresa->id], 
                         ['user_id', '=', Auth::user()->id], 
                     ])->first();
-                    
                 }
                 // calcudo do total de incidencia
                 //________________ valor total _____________
@@ -293,8 +278,12 @@ class CarrinhoController extends Controller
 
                     $update->update();
 
-                    $produto->estoque->stock = $produto->estoque->stock - $car['quantidade']; 
-                    $produto->estoque->update(); 
+                    $update_gestao_quantidade = Estoque::find($gestao_quantidade->id);
+                    
+                    if($update_gestao_quantidade){
+                        $update_gestao_quantidade->stock = $update_gestao_quantidade->stock - $car['quantidade']; 
+                        $update_gestao_quantidade->update(); 
+                    }
 
                     // return redirect()->back();
                     // return redirect()->route('pronto-venda');
@@ -322,9 +311,13 @@ class CarrinhoController extends Controller
                         'numero_serie' => "",
                         'entidade_id' => $entidade->empresa->id,
                     ]);  
-
-                    $produto->estoque->stock = $produto->estoque->stock - $car['quantidade']; 
-                    $produto->estoque->update(); 
+                        
+                    $update_gestao_quantidade = Estoque::find($gestao_quantidade->id);
+                    
+                    if($update_gestao_quantidade){
+                        $update_gestao_quantidade->stock = $update_gestao_quantidade->stock - $car['quantidade']; 
+                        $update_gestao_quantidade->update(); 
+                    }
 
                 }
             }
@@ -346,58 +339,38 @@ class CarrinhoController extends Controller
             ->get(); 
         
             if(count($movimento) == 0) {
-                return response()->json(['error' => 'O correu um erro, não existe nenhum produto selecionado!'], 400);
+                return response()->json(['message' => 'O correu um erro, não existe nenhum produto selecionado!'], 404);
             } 
+                            
+            $contarFactura = Venda::where([
+                ['factura', '=', $request->documento],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
+                ['entidade_id', '=', $entidade->empresa->id], 
+            ])->count();
+            
+            $numeroFactura = $contarFactura + 1;
+            
+            $codigo_designacao_factura = "{$request->factura} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}";
+           
             
             if($request['formaPagamento'] == "NU"){
-             
-                $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-                
-                if($subconta_caixa){
-                    foreach($carrinho as $car){
-                        $produt = Produto::findOrFail($car['produto_id']);
-                        
-                        $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
-                        
-                        if($subconta_servico_produto){
-                            if($produt->tipo == "P") {
-                                $descricao = "VENDA DE PRODUTOS";
-                                $model_id = 3;
-                            }else if($produt->tipo == "S") {
-                                $descricao = "PRESTAÇÃO DE SERVIÇO";
-                                $model_id = 4;
-                            }else {
-                                $descricao = "OUTRAS RECEITAS";
-                                $model_id = 7;
-                            }
-                            
-                            OperacaoFinanceiro::create([
-                                'nome' => $descricao,
-                                'status' => "pago",
-                                'motante' => $produt->preco_venda,
-                                'subconta_id' => $subconta_caixa->id,
-                                'cliente_id' => $subconta_cliente->id,
-                                'model_id' => $model_id,
-                                'type' => 'R',
-                                'parcelado' => "N",
-                                'status_pagamento' => "pago",
-                                'code' => $code,
-                                'descricao' => $descricao,
-                                'movimento' => "E",
-                                'date_at' => date("Y-m-d"),
-                                'user_id' => Auth::user()->id,
-                                'entidade_id' => $entidade->empresa->id,
-                                'exercicio_id' => 1,
-                                'periodo_id' => 12,
-                            ]);
-                            
-                        }else {
-                            ## produto vai cadastrado
-                        }
-                    }
-                }else{
-                    ## subcaixa conta não encontrada
-                }
+                                
+                $this->registra_operacoes(  
+                    $request['total_pagar'],
+                    $caixaActivo->id,
+                    $cliente->id,
+                    'R',
+                    "pago",
+                    $code,
+                    "E",
+                    date("Y-m-d"),
+                    $entidade->empresa->id,
+                    "Pagamento referente: {$codigo_designacao_factura}",
+                    Auth::user()->id,
+                    'pendente', 
+                    'C', 
+                    $caixaActivo->code_caixa
+                );
                 
                 $valor_cash = $request->total_pagar;
                 $valor_multicaixa = 0;
@@ -405,8 +378,7 @@ class CarrinhoController extends Controller
                 
                 $banco_id = NULL;
                 
-            }else if($request['formaPagamento'] == "MB"){
-              
+            }else if($request['formaPagamento'] == "MB" || $request['formaPagamento'] == "TB" || $request['formaPagamento'] == "DE"){
                 $bancoActivo = ContaBancaria::where([
                     ['active', true],
                     ['status', '=', 'aberto'],
@@ -414,55 +386,11 @@ class CarrinhoController extends Controller
                     ['entidade_id', '=', $entidade->empresa->id], 
                 ])->first();
                 
-                if( $bancoActivo ) {
-                    $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
-                    if($subconta_banco){
-                        foreach($carrinho as $car){
-                            $produt = Produto::findOrFail($car['produto_id']);
-                            
-                            $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
-                            
-                            if($subconta_servico_produto){
-                                if($produt->tipo == "P") {
-                                    $descricao = "VENDA DE PRODUTOS";
-                                    $model_id = 3;
-                                }else if($produt->tipo == "S") {
-                                    $descricao = "PRESTAÇÃO DE SERVIÇO";
-                                    $model_id = 4;
-                                }else {
-                                    $descricao = "OUTRAS RECEITAS";
-                                    $model_id = 7;
-                                }
-                                
-                                OperacaoFinanceiro::create([
-                                    'nome' => $descricao,
-                                    'status' => "pago",
-                                    'motante' => $produt->preco_venda,
-                                    'subconta_id' => $subconta_banco->id,
-                                    'cliente_id' => $subconta_cliente->id,
-                                    'model_id' => $model_id,
-                                    'type' => 'R',
-                                    'parcelado' => "N",
-                                    'status_pagamento' => "pago",
-                                    'code' => $code,
-                                    'descricao' => $descricao,
-                                    'movimento' => "E",
-                                    'date_at' => date("Y-m-d"),
-                                    'user_id' => Auth::user()->id,
-                                    'entidade_id' => $entidade->empresa->id,
-                                    'exercicio_id' => 1,
-                                    'periodo_id' => 12,
-                                ]);
-                            }else {
-                                ## produto vai cadastrado
-                            }
-                        }
-                    }else{
-                        ##
-                    }
-                }else {
-                    ## TPA não activo ou seja não existe nenhum Conta Bancaria activo 43
+                if( !$bancoActivo ) {
+                    return response()->json(['message' => "TPA não activo ou seja não existe nenhum Conta Bancaria activo, verifica e activa uma conta bancária para poder realizar uma venda via TPA.!"], 404);
                 }
+                
+                $this->registra_operacoes($request['total_pagar'], $bancoActivo->id, $cliente->id, 'R', "pago", $code, "E", date("Y-m-d"), $entidade->empresa->id, "Pagamento referente: {$codigo_designacao_factura}", Auth::user()->id, 'pendente', 'B', $caixaActivo->code_caixa);
                 
                 $valor_cash = 0;
                 $valor_multicaixa = $request->total_pagar;
@@ -471,6 +399,11 @@ class CarrinhoController extends Controller
                 
             }else if($request['formaPagamento'] == "OU"){
             
+                $valor_cash =  $request['valorEntregueInput'];
+                $valor_multicaixa = $request['valorEntregueMulticaixaInput'];
+                $request['valorEntregue'] = $request['valorEntregueMulticaixaInput'] + $request['valorEntregueInput'];
+                $banco_id = $caixaActivo->id;
+
                 $bancoActivo = ContaBancaria::where([
                     ['active', true],
                     ['status', '=', 'aberto'],
@@ -478,125 +411,152 @@ class CarrinhoController extends Controller
                     ['entidade_id', '=', $entidade->empresa->id], 
                 ])->first();
                 
-                if( $bancoActivo ) {
-                    $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-                    
-                    if($subconta_caixa){
-                        foreach($carrinho as $car){
-                            $produt = Produto::findOrFail($car['produto_id']);
-                            
-                            $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
-                            if($subconta_servico_produto){
-                                
-                                if($produt->tipo == "P") {
-                                    $descricao = "VENDA DE PRODUTOS";
-                                    $model_id = 3;
-                                }else if($produt->tipo == "S") {
-                                    $descricao = "PRESTAÇÃO DE SERVIÇO";
-                                    $model_id = 4;
-                                }else {
-                                    $descricao = "OUTRAS RECEITAS";
-                                    $model_id = 7;
-                                }
-                                OperacaoFinanceiro::create([
-                                    'nome' => $descricao,
-                                    'status' => "pago",
-                                    'motante' => $produt->preco_venda,
-                                    'subconta_id' => $subconta_caixa->id,
-                                    'cliente_id' => $subconta_cliente->id,
-                                    'model_id' => $model_id,
-                                    'type' => 'R',
-                                    'parcelado' => "N",
-                                    'status_pagamento' => "pago",
-                                    'code' => $code,
-                                    'descricao' => $descricao,
-                                    'movimento' => "E",
-                                    'date_at' => date("Y-m-d"),
-                                    'user_id' => Auth::user()->id,
-                                    'entidade_id' => $entidade->empresa->id,
-                                    'exercicio_id' => 1,
-                                    'periodo_id' => 12,
-                                ]);
-                                
-                            }else {
-                                ## produto vai cadastrado
-                            }
-                        }
-                    }else{
-                        ##
-                    }
-                
-                    $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
-                    
-                    if($subconta_banco){
-                        foreach($carrinho as $car){
-                            $produt = Produto::findOrFail($car['produto_id']);
-                            
-                            $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
-                            if($subconta_servico_produto){
-                                if($produt->tipo == "P") {
-                                    $descricao = "VENDA DE PRODUTOS";
-                                    $model_id = 3;
-                                }else if($produt->tipo == "S") {
-                                    $descricao = "PRESTAÇÃO DE SERVIÇO";
-                                    $model_id = 4;
-                                }else {
-                                    $descricao = "OUTRAS RECEITAS";
-                                    $model_id = 7;
-                                }
-                                
-                                OperacaoFinanceiro::create([
-                                    'nome' => $descricao,
-                                    'status' => "pago",
-                                    'motante' => $produt->preco_venda,
-                                    'subconta_id' => $subconta_banco->id,
-                                    'cliente_id' => $subconta_cliente->id,
-                                    'model_id' => $model_id,
-                                    'type' => 'R',
-                                    'parcelado' => "N",
-                                    'status_pagamento' => "pago",
-                                    'code' => $code,
-                                    'descricao' => $descricao,
-                                    'movimento' => "E",
-                                    'date_at' => date("Y-m-d"),
-                                    'user_id' => Auth::user()->id,
-                                    'entidade_id' => $entidade->empresa->id,
-                                    'exercicio_id' => 1,
-                                    'periodo_id' => 12,
-                                ]);
-                            
-                            }else {
-                                ## produto vai cadastrado
-                            }
-                        }
-                    }else{
-                        ##
-                    }
+                if( !$bancoActivo ) {
+                    return response()->json(['message' => "TPA não activo ou seja não existe nenhum Conta Bancaria activo, verifica e activa uma conta bancária para poder realizar uma venda via TPA.!"], 404);
                 }
-            
-                $valor_cash =  $request['valorEntregueInput'];
-                $valor_multicaixa = $request['valorEntregueMulticaixaInput'];
-                $request['valorEntregue'] = $request['valorEntregueMulticaixaInput'] + $request['valorEntregueInput'];
-                $banco_id = $caixaActivo->id;
+                
+                $this->registra_operacoes($valor_multicaixa, $bancoActivo->id, $cliente->id, 'R', "pago", $code, "E", date("Y-m-d"), $entidade->empresa->id, "Pagamento referente: {$codigo_designacao_factura}", Auth::user()->id, 'pendente', 'B', $caixaActivo->code_caixa);
+                
+                $this->registra_operacoes($valor_cash, $caixaActivo->id, $cliente->id, 'R', "pago", $code, "E", date("Y-m-d"), $entidade->empresa->id, "Pagamento referente: {$codigo_designacao_factura}", Auth::user()->id, 'pendente', 'C', $caixaActivo->code_caixa);
                 
             }
             
-            $subconta_venda_mercadoria= Subconta::where('numero', ENV('VENDA_DE_MERCADORIA'))->first();
-            $subconta_prestacao_servico = Subconta::where('numero', ENV('PRESTACAO_SERVICO'))->first();
-            $subconta_custo_mercadoria = Subconta::where('numero', ENV('CUSTO_MERCADORIA_VENDIDA'))->first();
-            
-            foreach($carrinho as $car){
-            
-                $subconta_iva = Subconta::where('numero', ENV('IVA_LIQUIDADO'))->first();
-                $produt = Produto::findOrFail($car['produto_id']); 
-                $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                $subconta_venda_mercadoria= Subconta::where('numero', ENV('VENDA_DE_MERCADORIA'))->first();
+                $subconta_prestacao_servico = Subconta::where('numero', ENV('PRESTACAO_SERVICO'))->first();
+                $subconta_custo_mercadoria = Subconta::where('numero', ENV('CUSTO_MERCADORIA_VENDIDA'))->first();
                 
-                if($subconta_servico_produto){
-                    // caso o serviço/produto cobrar IVA
-                    if($produt->taxa != 0){
-                        if($subconta_iva){
-                        
+                foreach($carrinho as $car){
+                
+                    $subconta_iva = Subconta::where('numero', ENV('IVA_LIQUIDADO'))->first();
+                    $produt = Produto::findOrFail($car['produto_id']); 
+                    $subconta_servico_produto = Subconta::where('code', $produt->code)->first();
+                    
+                    if($subconta_servico_produto){
+                        // caso o serviço/produto cobrar IVA
+                        if($produt->taxa != 0){
+                            if($subconta_iva){
+                                if($produt->tipo == "P"){
+                                    $movimeto = Movimento::create([
+                                        'user_id' => Auth::user()->id,
+                                        'subconta_id' => $subconta_venda_mercadoria->id,
+                                        'status' => true,
+                                        'movimento' => 'S',
+                                        'credito' => $car['valor_pagar'] ?? 0,
+                                        'debito' => 0,
+                                        'observacao' => $request->observacao,
+                                        'code' => $code,
+                                        'data_at' => date("Y-m-d"),
+                                        'entidade_id' => $entidade->empresa->id,
+                                        'exercicio_id' => 1,
+                                        'periodo_id' => 12,
+                                    ]);
+                                }
+                                if($produt->tipo == "S"){
+                                    $movimeto = Movimento::create([
+                                        'user_id' => Auth::user()->id,
+                                        'subconta_id' => $subconta_prestacao_servico->id,
+                                        'status' => true,
+                                        'movimento' => 'S',
+                                        'credito' => $car['valor_pagar'] ?? 0,
+                                        'debito' => 0,
+                                        'observacao' => $request->observacao,
+                                        'code' => $code,
+                                        'data_at' => date("Y-m-d"),
+                                        'entidade_id' => $entidade->empresa->id,
+                                        'exercicio_id' => 1,
+                                        'periodo_id' => 12,
+                                    ]);
+                                }
+                                if($entidade->empresa->tipo_inventario == "PERMANENTE"){
+                                    ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
+                                    $movimeto = Movimento::create([
+                                        'user_id' => Auth::user()->id,
+                                        'subconta_id' => $subconta_servico_produto->id,
+                                        'status' => true,
+                                        'movimento' => 'S',
+                                        'credito' => ($produt->preco_custo ?? 0) * $car['quantidade'],
+                                        'debito' => 0,
+                                        'observacao' => $request->observacao,
+                                        'code' => $code,
+                                        'data_at' => date("Y-m-d"),
+                                        'entidade_id' => $entidade->empresa->id,
+                                        'exercicio_id' => 1,
+                                        'periodo_id' => 12,
+                                    ]);
+                                    
+                                    ## custo da mercadoria
+                                    $movimeto = Movimento::create([
+                                        'user_id' => Auth::user()->id,
+                                        'subconta_id' => $subconta_custo_mercadoria->id,
+                                        'status' => true,
+                                        'movimento' => 'S',
+                                        'credito' => 0,
+                                        'debito' => ($produt->preco_custo ?? 0) * $car['quantidade'],
+                                        'observacao' => $request->observacao,
+                                        'code' => $code,
+                                        'data_at' => date("Y-m-d"),
+                                        'entidade_id' => $entidade->empresa->id,
+                                        'exercicio_id' => 1,
+                                        'periodo_id' => 12,
+                                    ]);
+                                }
+                                
+                                ## creditar na conta do IVA LIQUIDADO - 34.5.3.1
+                                // $movimeto = Movimento::create([
+                                //     'user_id' => Auth::user()->id,
+                                //     'subconta_id' => $subconta_iva->id,
+                                //     'status' => true,
+                                //     'movimento' => 'S',
+                                //     'credito' => ($produt->preco_venda ?? 0) - ($produt->preco??0),
+                                //     'debito' => 0,
+                                //     'observacao' => $request->observacao,
+                                //     'code' => $code,
+                                //     'data_at' => date("Y-m-d"),
+                                //     'entidade_id' => $entidade->empresa->id,
+                                //     'exercicio_id' => 1,
+                                //     'periodo_id' => 12,
+                                // ]);
+                                
+                                ## creditar e debitar na conta 31 ou seja preciso aumentar a divida do clientes e depois liquidar da mesma divida
+                                ## START
+                                $movimeto = Movimento::create([
+                                    'user_id' => Auth::user()->id,
+                                    'subconta_id' => $subconta_cliente->id,
+                                    'status' => true,
+                                    'movimento' => 'E',
+                                    'credito' => 0,
+                                    'debito' => $car['valor_pagar'] ?? 0,
+                                    'observacao' => $request->observacao,
+                                    'code' => $code,
+                                    'data_at' => date("Y-m-d"),
+                                    'entidade_id' => $entidade->empresa->id,
+                                    'exercicio_id' => 1,
+                                    'periodo_id' => 12,
+                                ]);
+                                $movimeto = Movimento::create([
+                                    'user_id' => Auth::user()->id,
+                                    'subconta_id' => $subconta_cliente->id,
+                                    'status' => true,
+                                    'movimento' => 'E',
+                                    'credito' => $car['valor_pagar'] ?? 0,
+                                    'debito' => 0,
+                                    'observacao' => $request->observacao,
+                                    'code' => $code,
+                                    'data_at' => date("Y-m-d"),
+                                    'entidade_id' => $entidade->empresa->id,
+                                    'exercicio_id' => 1,
+                                    'periodo_id' => 12,
+                                ]);
+                                ## - END
+                                ## vamor aumentar o valor do caixa - 45/43
+                            }else{
+                                ## a conta do iva não esta cadastrada
+                            }
+                        }else {
+                            ## caso o serviço/produto não cobra o iva ou 
                             if($produt->tipo == "P"){
+                                ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
                                 $movimeto = Movimento::create([
                                     'user_id' => Auth::user()->id,
                                     'subconta_id' => $subconta_venda_mercadoria->id,
@@ -612,8 +572,9 @@ class CarrinhoController extends Controller
                                     'periodo_id' => 12,
                                 ]);
                             }
-                                                    
+                            
                             if($produt->tipo == "S"){
+                                ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
                                 $movimeto = Movimento::create([
                                     'user_id' => Auth::user()->id,
                                     'subconta_id' => $subconta_prestacao_servico->id,
@@ -629,9 +590,8 @@ class CarrinhoController extends Controller
                                     'periodo_id' => 12,
                                 ]);
                             }
-                                                    
-                            if($entidade->empresa->tipo_inventario == "PERMANENTE"){
                             
+                            if($entidade->empresa->tipo_inventario == "PERMANENTE"){
                                 ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
                                 $movimeto = Movimento::create([
                                     'user_id' => Auth::user()->id,
@@ -666,23 +626,6 @@ class CarrinhoController extends Controller
                             
                             }
                             
-                            
-                            ## creditar na conta do IVA LIQUIDADO - 34.5.3.1
-                            // $movimeto = Movimento::create([
-                            //     'user_id' => Auth::user()->id,
-                            //     'subconta_id' => $subconta_iva->id,
-                            //     'status' => true,
-                            //     'movimento' => 'S',
-                            //     'credito' => ($produt->preco_venda ?? 0) - ($produt->preco??0),
-                            //     'debito' => 0,
-                            //     'observacao' => $request->observacao,
-                            //     'code' => $code,
-                            //     'data_at' => date("Y-m-d"),
-                            //     'entidade_id' => $entidade->empresa->id,
-                            //     'exercicio_id' => 1,
-                            //     'periodo_id' => 12,
-                            // ]);
-                            
                             ## creditar e debitar na conta 31 ou seja preciso aumentar a divida do clientes e depois liquidar da mesma divida
                             ## START
                             $movimeto = Movimento::create([
@@ -691,7 +634,7 @@ class CarrinhoController extends Controller
                                 'status' => true,
                                 'movimento' => 'E',
                                 'credito' => 0,
-                                'debito' => $car['valor_pagar'] ?? 0,
+                                'debito' => $car['valor_pagar'],
                                 'observacao' => $request->observacao,
                                 'code' => $code,
                                 'data_at' => date("Y-m-d"),
@@ -705,7 +648,7 @@ class CarrinhoController extends Controller
                                 'subconta_id' => $subconta_cliente->id,
                                 'status' => true,
                                 'movimento' => 'E',
-                                'credito' => $car['valor_pagar'] ?? 0,
+                                'credito' => $car['valor_pagar'],
                                 'debito' => 0,
                                 'observacao' => $request->observacao,
                                 'code' => $code,
@@ -715,206 +658,22 @@ class CarrinhoController extends Controller
                                 'periodo_id' => 12,
                             ]);
                             ## - END
-                            ## vamor aumentar o valor do caixa - 45/43
-                                                
-                        }else{
-                            ## a conta do iva não esta cadastrada
                         }
                     }else {
-                        ## caso o serviço/produto não cobra o iva ou 
-                        
-                        
-                        if($produt->tipo == "P"){
-                            ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
-                            $movimeto = Movimento::create([
-                                'user_id' => Auth::user()->id,
-                                'subconta_id' => $subconta_venda_mercadoria->id,
-                                'status' => true,
-                                'movimento' => 'S',
-                                'credito' => $car['valor_pagar'] ?? 0,
-                                'debito' => 0,
-                                'observacao' => $request->observacao,
-                                'code' => $code,
-                                'data_at' => date("Y-m-d"),
-                                'entidade_id' => $entidade->empresa->id,
-                                'exercicio_id' => 1,
-                                'periodo_id' => 12,
-                            ]);
-                        }
-                        
-                        if($produt->tipo == "S"){
-                            ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
-                            $movimeto = Movimento::create([
-                                'user_id' => Auth::user()->id,
-                                'subconta_id' => $subconta_prestacao_servico->id,
-                                'status' => true,
-                                'movimento' => 'S',
-                                'credito' => $car['valor_pagar'] ?? 0,
-                                'debito' => 0,
-                                'observacao' => $request->observacao,
-                                'code' => $code,
-                                'data_at' => date("Y-m-d"),
-                                'entidade_id' => $entidade->empresa->id,
-                                'exercicio_id' => 1,
-                                'periodo_id' => 12,
-                            ]);
-                        }
-                        
-                        
-                        
-                        if($entidade->empresa->tipo_inventario == "PERMANENTE"){
-                            
-                            ## creditar na conta proveito - 26 - ou seja diminuir o valor sem o iva
-                            $movimeto = Movimento::create([
-                                'user_id' => Auth::user()->id,
-                                'subconta_id' => $subconta_servico_produto->id,
-                                'status' => true,
-                                'movimento' => 'S',
-                                'credito' => ($produt->preco_custo ?? 0) * $car['quantidade'],
-                                'debito' => 0,
-                                'observacao' => $request->observacao,
-                                'code' => $code,
-                                'data_at' => date("Y-m-d"),
-                                'entidade_id' => $entidade->empresa->id,
-                                'exercicio_id' => 1,
-                                'periodo_id' => 12,
-                            ]);
-                            
-                            ## custo da mercadoria
-                            $movimeto = Movimento::create([
-                                'user_id' => Auth::user()->id,
-                                'subconta_id' => $subconta_custo_mercadoria->id,
-                                'status' => true,
-                                'movimento' => 'S',
-                                'credito' => 0,
-                                'debito' => ($produt->preco_custo ?? 0) * $car['quantidade'],
-                                'observacao' => $request->observacao,
-                                'code' => $code,
-                                'data_at' => date("Y-m-d"),
-                                'entidade_id' => $entidade->empresa->id,
-                                'exercicio_id' => 1,
-                                'periodo_id' => 12,
-                            ]);
-                        
-                        }
-                        
-                        ## creditar e debitar na conta 31 ou seja preciso aumentar a divida do clientes e depois liquidar da mesma divida
-                        ## START
-                        $movimeto = Movimento::create([
-                            'user_id' => Auth::user()->id,
-                            'subconta_id' => $subconta_cliente->id,
-                            'status' => true,
-                            'movimento' => 'E',
-                            'credito' => 0,
-                            'debito' => $car['valor_pagar'],
-                            'observacao' => $request->observacao,
-                            'code' => $code,
-                            'data_at' => date("Y-m-d"),
-                            'entidade_id' => $entidade->empresa->id,
-                            'exercicio_id' => 1,
-                            'periodo_id' => 12,
-                        ]);
-                        
-                        $movimeto = Movimento::create([
-                            'user_id' => Auth::user()->id,
-                            'subconta_id' => $subconta_cliente->id,
-                            'status' => true,
-                            'movimento' => 'E',
-                            'credito' => $car['valor_pagar'],
-                            'debito' => 0,
-                            'observacao' => $request->observacao,
-                            'code' => $code,
-                            'data_at' => date("Y-m-d"),
-                            'entidade_id' => $entidade->empresa->id,
-                            'exercicio_id' => 1,
-                            'periodo_id' => 12,
-                        ]);
-                        ## - END
+                        ## subconta do produto não encontrado
                     }
-                    
-                }else {
-                    ## subconta do produto não encontrado
                 }
                 
-            }
-            
-            if($request['formaPagamento'] == "NU"){
-                $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-           
-                ## vamor aumentar o valor do caixa - 45/43
-                $movimeto = Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta_caixa->id,
-                    'status' => true,
-                    'movimento' => 'E',
-                    'credito' => 0,
-                    'debito' => $request->total_pagar??0,
-                    'observacao' => $request->observacao,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                    'exercicio_id' => 1,
-                    'periodo_id' => 12,
-                ]);
-                
-            }else if($request['formaPagamento'] == "MB"){
-                $bancoActivo = ContaBancaria::where([
-                    ['active', true],
-                    ['status', '=', 'aberto'],
-                    ['user_id', '=', Auth::user()->id],
-                    ['entidade_id', '=', $entidade->empresa->id], 
-                ])->first();
-                
-                $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
-                
-                $movimeto = Movimento::create([
-                    'user_id' => Auth::user()->id,
-                    'subconta_id' => $subconta_banco->id,
-                    'status' => true,
-                    'movimento' => 'E',
-                    'credito' => 0,
-                    'debito' => $request->total_pagar??0,
-                    'observacao' => $request->observacao,
-                    'code' => $code,
-                    'data_at' => date("Y-m-d"),
-                    'entidade_id' => $entidade->empresa->id,
-                    'exercicio_id' => 1,
-                    'periodo_id' => 12,
-                ]);
-                                
-            }else if($request['formaPagamento'] == "OU"){
-                $bancoActivo = ContaBancaria::where([
-                    ['active', true],
-                    ['status', '=', 'aberto'],
-                    ['user_id', '=', Auth::user()->id],
-                    ['entidade_id', '=', $entidade->empresa->id], 
-                ])->first();
-                if( $bancoActivo ) {
+                if($request['formaPagamento'] == "NU"){
                     $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
-                    $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
-                    
+                    ## vamor aumentar o valor do caixa - 45/43
                     $movimeto = Movimento::create([
                         'user_id' => Auth::user()->id,
                         'subconta_id' => $subconta_caixa->id,
                         'status' => true,
                         'movimento' => 'E',
                         'credito' => 0,
-                        'debito' => $request['valorEntregueInput'] ??0,
-                        'observacao' => $request->observacao,
-                        'code' => $code,
-                        'data_at' => date("Y-m-d"),
-                        'entidade_id' => $entidade->empresa->id,
-                        'exercicio_id' => 1,
-                        'periodo_id' => 12,
-                    ]);
-                        
-                    $movimeto = Movimento::create([
-                        'user_id' => Auth::user()->id,
-                        'subconta_id' => $subconta_banco->id,
-                        'status' => true,
-                        'movimento' => 'E',
-                        'credito' => 0,
-                        'debito' => $request['valorEntregueMulticaixaInput']??0,
+                        'debito' => $request->total_pagar??0,
                         'observacao' => $request->observacao,
                         'code' => $code,
                         'data_at' => date("Y-m-d"),
@@ -923,6 +682,73 @@ class CarrinhoController extends Controller
                         'periodo_id' => 12,
                     ]);
                     
+                }else if($request['formaPagamento'] == "MB"){
+                    $bancoActivo = ContaBancaria::where([
+                        ['active', true],
+                        ['status', '=', 'aberto'],
+                        ['user_id', '=', Auth::user()->id],
+                        ['entidade_id', '=', $entidade->empresa->id], 
+                    ])->first();
+                    
+                    $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
+                    
+                    $movimeto = Movimento::create([
+                        'user_id' => Auth::user()->id,
+                        'subconta_id' => $subconta_banco->id,
+                        'status' => true,
+                        'movimento' => 'E',
+                        'credito' => 0,
+                        'debito' => $request->total_pagar??0,
+                        'observacao' => $request->observacao,
+                        'code' => $code,
+                        'data_at' => date("Y-m-d"),
+                        'entidade_id' => $entidade->empresa->id,
+                        'exercicio_id' => 1,
+                        'periodo_id' => 12,
+                    ]);
+                                    
+                }else if($request['formaPagamento'] == "OU"){
+                    $bancoActivo = ContaBancaria::where([
+                        ['active', true],
+                        ['status', '=', 'aberto'],
+                        ['user_id', '=', Auth::user()->id],
+                        ['entidade_id', '=', $entidade->empresa->id], 
+                    ])->first();
+                    if( $bancoActivo ) {
+                        $subconta_caixa = Subconta::where('code', $caixaActivo->code)->first();
+                        $subconta_banco = Subconta::where('code', $bancoActivo->code)->first();
+                        
+                        $movimeto = Movimento::create([
+                            'user_id' => Auth::user()->id,
+                            'subconta_id' => $subconta_caixa->id,
+                            'status' => true,
+                            'movimento' => 'E',
+                            'credito' => 0,
+                            'debito' => $request['valorEntregueInput'] ??0,
+                            'observacao' => $request->observacao,
+                            'code' => $code,
+                            'data_at' => date("Y-m-d"),
+                            'entidade_id' => $entidade->empresa->id,
+                            'exercicio_id' => 1,
+                            'periodo_id' => 12,
+                        ]);
+                            
+                        $movimeto = Movimento::create([
+                            'user_id' => Auth::user()->id,
+                            'subconta_id' => $subconta_banco->id,
+                            'status' => true,
+                            'movimento' => 'E',
+                            'credito' => 0,
+                            'debito' => $request['valorEntregueMulticaixaInput']??0,
+                            'observacao' => $request->observacao,
+                            'code' => $code,
+                            'data_at' => date("Y-m-d"),
+                            'entidade_id' => $entidade->empresa->id,
+                            'exercicio_id' => 1,
+                            'periodo_id' => 12,
+                        ]);
+                        
+                    }
                 }
             }
             
@@ -930,16 +756,10 @@ class CarrinhoController extends Controller
                 return response()->json(['error' => 'O Valor Entregue para esta Compra é insuficiente!'], 400);
                 Alert::warning('Erro', 'O Valor Entregue para esta Compra é insuficiente!');
             }          
-                
-            $contarFactura = Venda::where([
-                ['factura', '=', $request->documento],
-                ['ano_factura', '=', date("Y")],
-                ['entidade_id', '=', $entidade->empresa->id], 
-            ])->count();
-    
+
             $ultimoRecibo = Venda::where([
                 ['factura', '=', $request->documento],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -955,11 +775,6 @@ class CarrinhoController extends Controller
             //Manipulação de datas: data actual
             $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            // $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
-    
-            $ano = date("Y");
-            $numeroFactura = $contarFactura + 1;
-    
             $rsa = new RSA(); //Algoritimo RSA
     
             $privatekey = $this->pegarChavePrivada();
@@ -967,10 +782,8 @@ class CarrinhoController extends Controller
     
             // Lendo a private key
             $rsa->loadKey($privatekey);
-        
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
-            
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->documento} {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($request['total_pagar'], 2, ".", "") . ';' . $hashAnterior;
+                    
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}" . ';' . number_format($request['total_pagar'], 2, ".", "") . ';' . $hashAnterior;
             
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
@@ -1013,7 +826,7 @@ class CarrinhoController extends Controller
                 'valor_total' => $request['total_pagar'],
                 'valor_troco' => $request['valorEntregue'] - $request['total_pagar'],
                 'code' => $code,
-                'ano_factura' => $ano,
+                'ano_factura' => $entidade->empresa->ano_factura,
                 'nome_cliente' => $request['nomeCliente'] ?? "CONSUMIDOR FINAL",
                 'documento_nif' => $request['nomeNIF'] ?? "999999999",
                 'desconto' => 0,
@@ -1025,7 +838,7 @@ class CarrinhoController extends Controller
                 'data_disponivel' => date("y-m-d"),
                 'pagamento' => $request['formaPagamento'],
                 'factura' => $request['documento'],
-                'factura_next' => "{$request['documento']} {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
+                'factura_next' => "{$request['documento']} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}",
                 'observacao' => "venda realizada com sucesso!",
                 'referencia' => "venda realizada com sucesso!",
     
@@ -1046,24 +859,22 @@ class CarrinhoController extends Controller
             if($create->save()){
                 
                 if($request->venda_realizado == "CAIXA"){
-                    $movimentos = Itens_venda::where([
-                        ['user_id','=', Auth::user()->id],
-                        ['status', '=', 'processo'],
-                        ['caixa_id','=', $mesa->id],
-                        ['status_uso','=', "CAIXA"],
-                        ['entidade_id', '=', $entidade->empresa->id], 
-                        ['code', NULL],
-                    ])->get(); 
+                    $movimentos = Itens_venda::where('user_id','=', Auth::user()->id)
+                        ->where('status', '=', 'processo')
+                        ->where('caixa_id','=', $mesa->id)
+                        ->where('status_uso','=', "CAIXA")
+                        ->where('entidade_id', '=', $entidade->empresa->id)
+                        ->where('code', NULL)
+                    ->get(); 
                 }
                 if($request->venda_realizado == "MESA"){
-                    $movimentos = Itens_venda::where([
-                        ['user_id','=', Auth::user()->id],
-                        ['mesa_id','=', $mesa->id],
-                        ['status_uso','=', "MESA"],
-                        ['status', '=', 'processo'],
-                        ['entidade_id', '=', $entidade->empresa->id], 
-                        ['code', NULL],
-                    ])->get(); 
+                    $movimentos = Itens_venda::where('user_id','=', Auth::user()->id)
+                        ->where('mesa_id','=', $mesa->id)
+                        ->where('status_uso','=', "MESA")
+                        ->where('status', '=', 'processo')
+                        ->where('entidade_id', '=', $entidade->empresa->id)
+                        ->where('code', NULL)
+                    ->get(); 
                 }
     
                 $totalValorBase = 0;
@@ -1175,21 +986,19 @@ class CarrinhoController extends Controller
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];
 
-        // Alert::success('Sucesso', 'Venda realizada com sucesso!');
-        // return view('dashboard.facturas.documentos.factura-recibo', $head);
-
         // Retorna a resposta de sucesso
         return response()->json(['message' => 'Pagamento realizado com sucesso!', 'data' => $head], 200);
     }
 
     
-    public function inserir_operacao($descricao, $motante, $subconta, $cliente, $model, $type, $code, $movimento)
+    public function inserir_operacao($descricao, $motante, $subconta, $cliente, $model, $type, $code, $movimento, $formas = "C")
     {
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
     
         OperacaoFinanceiro::create([
             'nome' => $descricao,
             'status' => "pago",
+            'formas' => $formas,
             'motante' => $motante,
             'subconta_id' => $subconta,
             'cliente_id' => $cliente,

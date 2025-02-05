@@ -48,7 +48,7 @@
                     @endif
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-12 bg-light">
                     <div class="card">
@@ -69,7 +69,7 @@
                                         <input type="date" class="form-control" value="{{ $requests['data_final'] ?? '' }}" name="data_final" placeholder="Data final">
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-12 col-md-3">
                                     <label for="tipo_movimento" class="form-label">Tipo movimento</label>
                                     <select type="text" class="form-control select2" name="tipo_movimento">
@@ -78,7 +78,7 @@
                                         <option value="D" {{ $requests['tipo_movimento'] == "D" ? 'selected' : ''}}>Despesas</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="col-12 col-md-3">
                                     <label for="status" class="form-label">Estado</label>
                                     <select type="text" class="form-control select2" name="status">
@@ -88,7 +88,7 @@
                                         <option value="atrasado" {{ $requests['status'] == "atrasado" ? 'selected' : ''}}>Atrasado</option>
                                     </select>
                                 </div>
-                               
+
                             </div>
                             <div class="card-footer text-right">
                                 <button type="submit" class="btn btn-primary btn-sm ml-2 text-right"> <i class="fas fa-search"></i> Pesquisar</button>
@@ -98,23 +98,29 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-12 col-md-12">
                     <div class="card">
                         @if ($operacoes)
                         <!-- /.card-header -->
                         <div class="card-body table-responsive">
-                            <table class="table table-hover text-nowrap" id="carregar_tabela"  style="width: 100%">
+                            <table class="table table-hover text-nowrap" id="carregar_tabela" style="width: 100%">
                                 <thead>
                                     <tr>
                                         <th>#</th>
                                         <th>Referência</th>
                                         <th>Estado</th>
+
+                                        @if ($tipo_entidade_logado->empresa->tem_permissao("Gestão Contabilidade"))
+                                        <th>Subconta</th>
+                                        @else
+                                        <th>Caixa/Conta Bancária</th>
+                                        @endif
+
                                         <th>Dispesa/Receita</th>
                                         <th>Fornecedor/Cliente</th>
                                         <th class="text-right">Data</th>
-                                        <th>Pagamento/Recebimento</th>
                                         <th class="text-right">Motante</th>
                                         <th><span class="float-right">Acções</span></th>
                                     </tr>
@@ -125,10 +131,24 @@
                                         <td>{{ $item->id }}</td>
                                         <td>{{ $item->nome }}</td>
                                         <td>{{ $item->status }}</td>
+
+                                        @if ($tipo_entidade_logado->empresa->tem_permissao("Gestão Contabilidade"))
+                                        <td>{{ $item->subconta->numero ?? "" }} - {{ $item->subconta->nome ?? "" }}</td>
+                                        @else
+                                        @if ($item->formas == "C")
+                                        <td>{{ $item->caixa->conta ?? "" }} - {{ $item->caixa->nome ?? "" }}</td>
+                                        @else
+                                        @if ($item->formas == "B")
+                                        <td>{{ $item->contabancaria->conta ?? "" }} - {{ $item->contabancaria->nome ?? "" }}</td>
+                                        @else
+                                        <td>Outras</td>
+                                        @endif
+                                        @endif
+                                        @endif
+
                                         <td>{{ $item->type == "D" ? $item->dispesa->nome : $item->receita->nome }}</td>
-                                        <td>{{ $item->type == "D" ? $item->fornecedor->nome : $item->cliente->nome }}</td>
+                                        <td>{{ $item->type == "D" ? ($item->fornecedor ? $item->fornecedor->nome : "") : ($item->cliente ? $item->cliente->nome : "") }}</td>
                                         <td class="text-right">{{ $item->date_at }}</td>
-                                        <td>{{ $item->type == "D" ? $item->forma_pagamento->titulo : $item->forma_recebimento->titulo }}</td>
                                         @if ($item->type == "D")
                                         <td class="text-right text-danger">- {{ number_format($item->motante, 2, ',', '.')  }}</td>
                                         @else
@@ -142,7 +162,7 @@
                                             </button>
                                             <div class="dropdown-menu" role="menu">
                                                 @if (Auth::user()->can('editar dispesa'))
-                                                <a class="dropdown-item" href="{{ route('operacaoes-financeiras.lixeira-recuperar', $item->id) }}"><i class="fas fa-reset text-success"></i> Recuperar</a>
+                                                <a class="dropdown-item recuperar-record" href="{{ route('operacaoes-financeiras.lixeira-recuperar', $item->id) }}" data-id="{{ $item->id }}"><i class="fas fa-undo-alt text-success"></i> Recuperar</a>
                                                 @endif
                                             </div>
                                         </td>
@@ -167,17 +187,59 @@
 @endsection
 
 @section('scripts')
-  <script>
-    $(function() {
-      $("#carregar_tabela").DataTable({
-        language: {
-          url: "{{ asset('plugins/datatables/pt_br.json') }}"
-        },
-        "responsive": true,
-        "lengthChange": false,
-        "autoWidth": false,
-        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
-      }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+<script>
+    $(document).on('click', '.recuperar-record', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Deseja restaurar esta informação!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, desejo!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('operacaoes-financeiras.lixeira-recuperar', ':id') }}`.replace(':id', recordId)
+                    , method: 'GET'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
     });
-  </script>
+
+    $(function() {
+        $("#carregar_tabela").DataTable({
+            language: {
+                url: "{{ asset('plugins/datatables/pt_br.json') }}"
+            }
+            , "responsive": true
+            , "lengthChange": false
+            , "autoWidth": false
+            , "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+    });
+
+</script>
 @endsection

@@ -208,8 +208,7 @@
                         Swal.close();
                 
                         showMessage('Sucesso!', 'Seja bem vindo ao sistema!', 'success');
-                        //console.log(response.redirect)
-                        //return
+                     
                         window.location.href = response.redirect;
     
                         // window.location.reload();

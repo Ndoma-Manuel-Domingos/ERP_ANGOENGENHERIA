@@ -171,7 +171,8 @@ Route::get('/', [AppController::class, 'login'])->name('login_');
         Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
         
-        Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+        // Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+        
         Route::get('/dashboard/configuracao', [HomeController::class, 'configuracao_operacoes'])->name('dashboard.configuracao');
         Route::get('/dashboard/configuracao-inicializacao', [HomeController::class, 'configuracao_inicializacao'])->name('dashboard.configuracao-inicializacao');
         Route::get('/dashboard/configuracao-finalizacao', [HomeController::class, 'configuracao_finalizacao'])->name('dashboard.configuracao-finalizacao');
@@ -429,7 +430,7 @@ Route::get('/', [AppController::class, 'login'])->name('login_');
             Route::get('/dashboard/movimentos-caixas', [AppCaixaController::class, 'movimentos_caixa'])->name('caixa.movimentos_caixa');
             Route::get('/dashboard/movimentos-caixas-imprimir', [AppCaixaController::class, 'movimentos_imprimir'])->name('caixa.movimentos_caixa_imprimir');
     
-            Route::get('/dashboard/fechamento-caixas', [AppCaixaController::class, 'fechamento_caixa'])->name('caixa.fechamento_caixa');
+            Route::get('/dashboard/fechamento-caixas/{id?}', [AppCaixaController::class, 'fechamento_caixa'])->name('caixa.fechamento_caixa');
             Route::post('/dashboard/fechamento-caixas', [AppCaixaController::class, 'fechamento_caixa_create'])->name('caixa.fechamento_caixa_create');
             Route::post('/dashboard/continuar-com-caixas', [AppCaixaController::class, 'continuar_caixa_create'])->name('caixa.continuar_caixa_create');
             
@@ -584,7 +585,7 @@ Route::get('/', [AppController::class, 'login'])->name('login_');
         Route::get('/dashboard/bancos/{id}/detalhe', [ContaBancariaController::class, 'bancoDetalhe'])->name('contas-bancarias.detalhe');
         Route::get('/dashboard/abertura-bancos', [ContaBancariaController::class, 'abertura_bancos'])->name('contas-bancarias.abertura');
         Route::post('/dashboard/abertura-bancos', [ContaBancariaController::class, 'abertura_bancos_create'])->name('contas-bancarias.abertura_create');
-        Route::get('/dashboard/fechamento-bancos', [ContaBancariaController::class, 'fechamento_bancos'])->name('contas-bancarias.fechamento');
+        Route::get('/dashboard/fechamento-bancos/{id?}', [ContaBancariaController::class, 'fechamento_bancos'])->name('contas-bancarias.fechamento');
         Route::post('/dashboard/fechamento-bancos', [ContaBancariaController::class, 'fechamento_bancos_create'])->name('contas-bancarias.fechamento_create');
         Route::get('/dashboard/contas-bancarias.relatorio-fechamento/{code}', [ContaBancariaController::class, 'relatorio_fechamento_bancos'])->name('contas-bancarias.relatorio-fechamento');
         

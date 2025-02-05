@@ -22,6 +22,9 @@ class OperacaoFinanceiro extends Model
         'nome',
         'status',
         'motante',
+        'formas',
+        'code_caixa',
+        'status_caixa',
         'subconta_id',
         'cliente_id',
         'fornecedor_id',
@@ -37,6 +40,7 @@ class OperacaoFinanceiro extends Model
         'exercicio_id',
         'periodo_id',
         'user_id',
+        'user_open_id',
         'entidade_id',
     ];
 
@@ -57,27 +61,37 @@ class OperacaoFinanceiro extends Model
 
     public function cliente()
     {
-        return $this->belongsTo(Subconta::class, 'cliente_id', 'id');
+        return $this->belongsTo(Cliente::class, 'cliente_id', 'id');
     }
 
     public function dispesa()
     {
-        return $this->belongsTo(Dispesa::class, 'model_id', 'id');
+        return $this->belongsTo(Dispesa::class, 'model_id', 'id')->where('type', 'D');
     }
 
     public function receita()
     {
-        return $this->belongsTo(Receita::class, 'model_id', 'id');
+        return $this->belongsTo(Receita::class, 'model_id', 'id')->where('type', 'R');
     }
 
     public function caixa()
     {
-        return $this->belongsTo(Caixa::class);
+        return $this->belongsTo(Caixa::class, 'subconta_id', 'id');
+    }
+
+    public function contabancaria()
+    {
+        return $this->belongsTo(ContaBancaria::class, 'subconta_id', 'id');
     }
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function user_open()
+    {
+        return $this->belongsTo(User::class, 'user_open_id', 'id');
     }
 
     public function entidade()

@@ -164,7 +164,7 @@ class AGTController extends Controller
                 }
             } else {
                 $CustomerID = $cliente->id;
-                $AccountID =  $cliente->conta;
+                $AccountID =  $cliente->conta_corrente;
                 $CustomerTaxID = "999999999"; // $cliente->nif;
                 $CompanyName = $cliente->nome ?? "Desconhecido";
                 $AddressDetail = $cliente->morada ?? "Desconhecido";
@@ -709,8 +709,10 @@ class AGTController extends Controller
             $Payment->appendChild($dom->createElement('Period', Carbon::parse($StartDate)->format('m')));
             $Payment->appendChild($dom->createElement('TransactionDate', Carbon::parse($recibo->created_at)->format('Y-m-d')));
             $Payment->appendChild($dom->createElement('PaymentType', 'RG'));
+            
+            // dd($recibo);
 
-            $Description = $recibo->observacao ? $recibo->observacao : 'Liquidação da factura ' . $recibo->facturas->factura_next;
+            $Description = $recibo->observacao ? $recibo->observacao : 'Liquidação da factura ' . ($recibo->facturas ? $recibo->facturas->factura_next : "") ;
 
             $Payment->appendChild($dom->createElement('Description', $Description));
             $Payment->appendChild($dom->createElement('SystemID', $recibo->id));
@@ -757,8 +759,7 @@ class AGTController extends Controller
             //     ->where('id', $recibo->recibos_items[0]['factura_id'])
             //     ->where('empresa_id', auth()->user()->empresa_id)->first();
 
-
-            $SourceDocumentID->appendChild($dom->createElement('OriginatingON', $recibo->facturas->factura_next));
+            $SourceDocumentID->appendChild($dom->createElement('OriginatingON', ($recibo->facturas ? $recibo->facturas->factura_next : "")));
             $SourceDocumentID->appendChild($dom->createElement('InvoiceDate', Carbon::parse($recibo->facturas->created_at)->format('Y-m-d')));
             $SourceDocumentID->appendChild($dom->createElement('Description', $Description));
             $Line->appendChild($SourceDocumentID);
@@ -784,19 +785,20 @@ class AGTController extends Controller
         $sourceDocuments->appendChild($purchaseInvoices);
         $root->appendChild($sourceDocuments);
 
-        // $dom = $dom->saveXML();
-        // $dom = str_replace("<TransactionID>#</TransactionID>", "", $dom);
-        // $dom = str_replace("<TaxExemptionReason>#</TaxExemptionReason>", "", $dom);
-        // $dom = str_replace("<TaxExemptionCode>#</TaxExemptionCode>", "", $dom);
-        // $dom = str_replace("<Reason>#</Reason>", "", $dom);
+        $dom = $dom->saveXML();
+        $dom = str_replace("<TransactionID>#</TransactionID>", "", $dom);
+        $dom = str_replace("<TaxExemptionReason>#</TaxExemptionReason>", "", $dom);
+        $dom = str_replace("<TaxExemptionCode>#</TaxExemptionCode>", "", $dom);
+        $dom = str_replace("<Reason>#</Reason>", "", $dom);
         
         // $filename = "saft_" . date("d") . '_' . date("m") . '_' . date("Y");
+        $filename = "saft_" . date("d") . '_' . date("m") . '_' . date("Y") . ' _' . $request->data_inicio . ' - ' .$request->data_final;
       
-        // // return response()->streamDownload(function () use ($dom) {
-        // //     echo $dom;
-        // // }, $filename . '.xml');
+        return response()->streamDownload(function () use ($dom) {
+            echo $dom;
+        }, $filename . '.xml');
         
-        // // return FacadesResponse::make($dom, 200)->header('Content-Type', 'application/xml');
+        // return FacadesResponse::make($dom, 200)->header('Content-Type', 'application/xml');
         
         // $headers = [
         //     'Content-Type' => 'application/xml',
@@ -806,34 +808,33 @@ class AGTController extends Controller
         // return response($dom, 200, $headers);
         
         
-        $dom = $dom->saveXML();
-        $dom = str_replace("<TransactionID>#</TransactionID>", "", $dom);
-        $dom = str_replace("<TaxExemptionReason>#</TaxExemptionReason>", "", $dom);
-        $dom = str_replace("<TaxExemptionCode>#</TaxExemptionCode>", "", $dom);
-        $dom = str_replace("<Reason>#</Reason>", "", $dom);
+        // $dom = $dom->saveXML();
+        // $dom = str_replace("<TransactionID>#</TransactionID>", "", $dom);
+        // $dom = str_replace("<TaxExemptionReason>#</TaxExemptionReason>", "", $dom);
+        // $dom = str_replace("<TaxExemptionCode>#</TaxExemptionCode>", "", $dom);
+        // $dom = str_replace("<Reason>#</Reason>", "", $dom);
         
-        $filename = "saft_" . date("d") . '_' . date("m") . '_' . date("Y") . ' _' . $request->data_inicio . ' - ' .$request->data_final;
+        // $filename = "saft_" . date("d") . '_' . date("m") . '_' . date("Y") . ' _' . $request->data_inicio . ' - ' .$request->data_final;
         
-        $path = storage_path("app/public/saft_files/{$filename}");
+        // $path = storage_path("app/public/saft_files/{$filename}");
 
-        // Criar diretório se não existir
-        if (!file_exists(storage_path("app/public/saft_files"))) {
-            mkdir(storage_path("app/public/saft_files"), 0777, true);
-        }
+        // // Criar diretório se não existir
+        // if (!file_exists(storage_path("app/public/saft_files"))) {
+        //     mkdir(storage_path("app/public/saft_files"), 0777, true);
+        // }
     
-        // Salvar o ficheiro no servidor
-        file_put_contents($path, $dom);
+        // // Salvar o ficheiro no servidor
+        // file_put_contents($path, $dom);
     
-        // URL pública do arquivo
-        $url = asset("storage/saft_files/{$filename}");
+        // // URL pública do arquivo
+        // $url = asset("storage/saft_files/{$filename}");
     
-        // Retornar resposta JSON com a URL
-        return response()->json([
-            'success' => true,
-            'url' => $url,
-            'filename' => $filename,
-        ]);
-        
+        // // Retornar resposta JSON com a URL
+        // return response()->json([
+        //     'success' => true,
+        //     'url' => $url,
+        //     'filename' => $filename,
+        // ]);
 
         // return response()->streamDownload(function () use ($dom) {
         //     echo $dom;
@@ -898,20 +899,18 @@ class AGTController extends Controller
         try {
             DB::beginTransaction();
             
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+                    
             $privatekey = $this->pegarChavePrivada();
             $publickey = $this->pegarChavePublica();
             // 
             $rsa = new RSA(); //Algoritimo RSA
             // Lendo a private key
             $rsa->loadKey($privatekey);
-            $codigo_designacao_factura = "EAV";
-                        
-            //$ano_lectivo_activo = AnoLectivo::findOrFail($request->ano_lectivo_id);
-            
-            $ano = date("Y");
-            
+                       
             $pagamentos = Venda::where('entidade_id', Auth::user()->entidade_id)
                 ->select('id', 'factura_next', 'codigo_factura', 'hash', 'total_iva', 'total_incidencia', 'created_at')
+                ->whereBetween(DB::raw('DATE(created_at)'), array($request->data_inicio, $request->data_final))
                 ->where('factura', $request->tipo_documento)
                 ->orderBy('id', 'asc')
                 ->get();
@@ -930,7 +929,7 @@ class AGTController extends Controller
                 
                     $total_a_pagar = $pagamento->total_iva +  $pagamento->total_incidencia;
                     
-                    $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->tipo_documento} {$codigo_designacao_factura}{$ano}/{$n}" . ';' . number_format($total_a_pagar, 2, ".", "") . ';' . "";
+                    $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->tipo_documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$n}" . ';' . number_format($total_a_pagar, 2, ".", "") . ';' . "";
                     //ASSINATURA
                     $rsa->setSignatureMode(RSA::SIGNATURE_PKCS1); //Tipo de assinatura
                     $signaturePlaintext = $rsa->sign($plaintext); //Assinando o texto $plaintext(resultado das concatenações)                
@@ -939,8 +938,8 @@ class AGTController extends Controller
                     $pagamento->update([
                         'created_at' => $pagamento->created_at,
                         'codigo_factura' => $n,
-                        'ano_factura' => $ano,
-                        'factura_next' => "{$request->tipo_documento} {$codigo_designacao_factura}{$ano}/{$n}",
+                        'ano_factura' => $entidade->empresa->ano_factura,
+                        'factura_next' => "{$request->tipo_documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$n}",
                         'hash' => base64_encode($signaturePlaintext),
                         'texto_hash' => $plaintext, // Exemplo de hash para o primeiro registro
                     ]);
@@ -956,7 +955,7 @@ class AGTController extends Controller
                     $rsa->setHash(strtolower($hash)); // Configurando para o tipo Hash especificado em cima
                 
                     $total_a_pagar = $pagamento->total_iva +  $pagamento->total_incidencia;
-                    $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->tipo_documento} {$codigo_designacao_factura}{$ano}/{$n}" . ';' . number_format($total_a_pagar, 2, ".", "") . ';' . $previousHash;
+                    $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->tipo_documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$n}" . ';' . number_format($total_a_pagar, 2, ".", "") . ';' . $previousHash;
                     
                     //ASSINATURA
                     $rsa->setSignatureMode(RSA::SIGNATURE_PKCS1); //Tipo de assinatura
@@ -966,8 +965,8 @@ class AGTController extends Controller
                     $pagamento->update([
                         'created_at' => $pagamento->created_at,
                         'codigo_factura' => $n,
-                        'ano_factura' => $ano,
-                        'factura_next' => "{$request->tipo_documento} {$codigo_designacao_factura}{$ano}/{$n}",
+                        'ano_factura' => $entidade->empresa->ano_factura,
+                        'factura_next' => "{$request->tipo_documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$n}",
                         'hash' => base64_encode($signaturePlaintext), // Usa o hash do pagamento anterior
                         'texto_hash' => $plaintext,
                     ]);

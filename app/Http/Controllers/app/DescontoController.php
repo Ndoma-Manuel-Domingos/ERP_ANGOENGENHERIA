@@ -4,7 +4,6 @@ namespace App\Http\Controllers\app;
 
 use App\Http\Controllers\Controller;
 use App\Models\Desconto;
-use App\Models\Departamento;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +20,6 @@ class DescontoController extends Controller
      */
     public function index()
     {
-        //
         //
         $user = auth()->user();
 
@@ -55,7 +53,6 @@ class DescontoController extends Controller
     {
         //
         $user = auth()->user();
-        
         if(!$user->can('criar desconto')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
@@ -92,8 +89,7 @@ class DescontoController extends Controller
         ]);
 
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
-        
-        
+                
         try {
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
@@ -107,7 +103,6 @@ class DescontoController extends Controller
             ]);
             
             $desconto->numero = "D00" . $desconto->id;
-    
             $desconto->save();
             
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
@@ -121,7 +116,7 @@ class DescontoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
       
     }
 
@@ -211,9 +206,7 @@ class DescontoController extends Controller
             $desconto = Desconto::findOrFail($id);
             
             $desconto->numero = "D00" . $desconto->id;
-            
             $desconto->update($request->all());
-    
             $desconto->update();
             
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
@@ -227,7 +220,7 @@ class DescontoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
      
     }
 
@@ -246,12 +239,24 @@ class DescontoController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $desconto = Desconto::findOrFail($id);
-        if($desconto->delete()){
-            return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Excluir desconto");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui        
+            $desconto = Desconto::findOrFail($id);
+            $desconto->delete();
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluído com sucesso!"], 200);
+
     }
 
 }

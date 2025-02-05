@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class Venda extends Model
 {
@@ -131,9 +132,9 @@ class Venda extends Model
     // exibir imposto
     public function exibir_nome_factura($factura, $ano, $numero)
     {
-        $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
-        
-        return "{$factura} {$codigo_designacao_factura}---{$ano}/{$numero}";
+        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+    
+        return "{$factura} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numero}";
     }
     
     public function forma_pagamento($forma)

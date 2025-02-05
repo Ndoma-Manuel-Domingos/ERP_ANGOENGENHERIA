@@ -180,8 +180,6 @@
         });
     });
 
-
-
     $(function() {
         $("#carregar_tabela").DataTable({
             language: {

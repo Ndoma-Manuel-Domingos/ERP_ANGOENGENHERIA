@@ -84,9 +84,7 @@
                         <div class="col-12 col-md-12">
                             <div class="card p-5 bg-dark">
                                 <div class="card-body p-5 text-center">
-                                    <h1 class="h3 p-5">Para efectuar operações do caixa, nomeadamente facturação,
-                                        deverá
-                                        abrir a caixa</h1>
+                                    <h1 class="h3 p-5">Para efectuar operações do caixa, nomeadamente facturação, deverá abrir a caixa</h1>
                                 </div>
                             </div>
                         </div>
@@ -99,12 +97,12 @@
                                             <a class="nav-link active text-uppercase text-white" id="custom-tabs-four-home-tab" data-toggle="pill" href="#custom-tabs-four-home" role="tab" aria-controls="custom-tabs-four-home" aria-selected="true">Geral</a>
                                         </li>
                                         @if ($categorias)
-                                        @foreach ($categorias as $categoria)
-                                        <li class="nav-item">
-                                            <a class="nav-link text-uppercase text-white" id="custom-tabs-four-profile-tab{{ $categoria->id }}" data-toggle="pill" href="#custom-tabs-four-profile{{ $categoria->id }}" role="tab" aria-controls="custom-tabs-four-profile{{ $categoria->id }}" aria-selected="false">{{ $categoria->categoria }}
-                                            </a>
-                                        </li>
-                                        @endforeach
+                                            @foreach ($categorias as $categoria)
+                                            <li class="nav-item">
+                                                <a class="nav-link text-uppercase text-white" id="custom-tabs-four-profile-tab{{ $categoria->id }}" data-toggle="pill" href="#custom-tabs-four-profile{{ $categoria->id }}" role="tab" aria-controls="custom-tabs-four-profile{{ $categoria->id }}" aria-selected="false">{{ $categoria->categoria }}
+                                                </a>
+                                            </li>
+                                            @endforeach
                                         @endif
                                     </ul>
                                 </div>
@@ -113,32 +111,32 @@
                                     <div style="height: 400px;overflow: hidden; overflow-y: scroll">
                                         <div class="tab-content" id="custom-tabs-four-tabContent">
                                             <div class="tab-pane fade show active" id="custom-tabs-four-home" role="tabpanel" aria-labelledby="custom-tabs-four-home-tab">
-
                                                 <div class="row" id="carregar_produtos">
                                                     @foreach ($produtos as $item)
                                                     <div class="col-6 col-md-3 col-lg-2">
-                                                        <a class="adicionar-carrinho" style="cursor: pointer" data-id="{{ $item->id }}" data-nome="{{ $item->nome }}" data-preco="{{ $item->preco_venda }}">
+                                                        <a class="adicionar-carrinho" style="cursor: pointer" data-stock="{{ $item->total_produto_loja_activa() }}" data-id="{{ $item->id }}" data-nome="{{ $item->nome }}" data-preco="{{ $item->preco_venda }}">
                                                             <div class="card shadow-sm bg-light">
                                                                 <!-- /.card-header -->
-                                                                @if ($item->estoque)
-                                                                @if ($item->estoque->stock <= $item->estoque->stock_minimo)
+                                                                @if ($item->total_produto_loja_activa() <= 0)
                                                                     <div class="card-body bg-danger">
-                                                                    @else
-                                                                    <div class="card-body bg-info">
-                                                                    @endif
-                                                                    @else
+                                                                @endif
+                                                            
+                                                                @if ($item->total_produto_loja_activa() <= $item->total_produto_minimo_loja_activa() && $item->total_produto_minimo_loja_activa() > 0)
                                                                     <div class="card-body bg-warning">
-                                                                    @endif
+                                                                @endif
+                                                                
+                                                                @if ($item->total_produto_loja_activa() > $item->total_produto_minimo_loja_activa())
+                                                                    <div class="card-body bg-info">
+                                                                @endif
+                                                                    
                                                                     <div class="col-12 col-md-12 col-sm-12">
-                                                                        <h6 class="text-uppercase text-white">
-                                                                            {{ $item->nome }}</h6>
+                                                                        <h6 class="text-uppercase text-white"> {{ $item->nome }}</h6>
                                                                         <p class=" text-dark">
-                                                                            <strong>{{ number_format($item->preco_venda, 2, ',', '.') }}
-                                                                                <small>{{ $loja->moeda }}</small></strong>
+                                                                            <strong>{{ number_format($item->preco_venda, 2, ',', '.') }} <small>{{ $loja->moeda }}</small></strong>
                                                                         </p>
                                                                     </div>
                                                                 </div>
-                                                            <!-- /.card-body -->
+                                                                            <!-- /.card-body -->
                                                             </div>
                                                         </a>
                                                         <!-- /.card -->
@@ -155,30 +153,34 @@
                                                     @foreach ($categoria->produtos as $produto)
                                                     @if ($produto->categoria_id == $categoria->id)
                                                     <div class="col-6 col-md-3 col-lg-2">
-                                                        <a class="adicionar-carrinho" style="cursor: pointer" data-id="{{ $item->id }}" data-nome="{{ $item->nome }}" data-preco="{{ $item->preco_venda }}">
+                                                        <a class="adicionar-carrinho" style="cursor: pointer" data-stock="{{ $produto->total_produto_loja_activa() }}" data-id="{{ $item->id }}" data-nome="{{ $item->nome }}" data-preco="{{ $item->preco_venda }}">
                                                             <div class="card shadow-sm bg-light">
 
                                                                 <!-- /.card-header -->
-                                                                @if ($produto->estoque)
-                                                                @if ($produto->estoque->stock <= $produto->estoque->stock_minimo)
-                                                                    <div class="card-body bg-danger">
-                                                                        @else
+                                                                    
+                                                                    @if ($produto->total_produto_loja_activa() <= 0)
+                                                                        <div class="card-body bg-danger">
+                                                                    @endif
+                                                                
+                                                                    @if ($produto->total_produto_loja_activa() <= $produto->total_produto_minimo_loja_activa() && $produto->total_produto_minimo_loja_activa() > 0)
+                                                                        <div class="card-body bg-warning">
+                                                                    @endif
+                                                                    
+                                                                    @if ($produto->total_produto_loja_activa() > $produto->total_produto_minimo_loja_activa())
                                                                         <div class="card-body bg-info">
-                                                                            @endif
-                                                                            @else
-                                                                            <div class="card-body bg-warning">
-                                                                                @endif
-                                                                                <div class="col-12 col-md-12 col-sm-12">
-                                                                                    <h6 class="pt-3 text-uppercase text-white">{{ $produto->nome }}
-                                                                                    </h6>
-                                                                                    <p class="text-dark">
-                                                                                        <strong>{{ number_format($produto->preco_venda, 2, ',', '.') }}
-                                                                                            <small>{{ $loja->moeda }}</small></strong>
-                                                                                    </p>
-                                                                                </div>
-                                                                            </div>
-                                                                            <!-- /.card-body -->
+                                                                    @endif
+                                                                    
+                                                                        <div class="col-12 col-md-12 col-sm-12">
+                                                                            <h6 class="pt-3 text-uppercase text-white">{{ $produto->nome }}
+                                                                            </h6>
+                                                                            <p class="text-dark">
+                                                                                <strong>{{ number_format($produto->preco_venda, 2, ',', '.') }}
+                                                                                    <small>{{ $loja->moeda }}</small></strong>
+                                                                            </p>
                                                                         </div>
+                                                                    </div>
+                                                                            <!-- /.card-body -->
+                                                            </div>
                                                         </a>
                                                         <!-- /.card -->
                                                     </div>
@@ -195,10 +197,10 @@
                             </div>
                         </div>
                         @endif
-                        
+
                     </div>
                 </div>
-                
+
                 <!-- /.col-md-6 -->
                 <div class="col-lg-3 col-md-4 col-ls-12 col-12">
                     @if (empty($checkCaixa))
@@ -245,10 +247,8 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <button type="submit" class="btn btn-md mt-4 d-iniline-block btn-primary"><i class="fas fa-box"></i> Abrir Caixa</button>
                             </form>
-
                         </div>
                     </div>
                     @else
@@ -299,7 +299,7 @@
 
                                 <div class="col-12 col-md-1">
                                     @if ($tipo_entidade_logado->empresa->inicializacao == 'Y')
-                                    <a href="{{ route('logout') }}" class="btn btn-danger col-12 col-md-12 px-2 py-4 text-center" onclick="event.preventDefault();document.getElementById('formLoggout').submit();" role="button" data-slide="true" data-widget="control-sidebar" title="SAIR DAS VENDAS">
+                                    <a href="{{ route('logout') }}" data-id="{{ $checkCaixa->id }}" class="btn btn-danger col-12 col-md-12 px-2 py-4 text-center logout_caixa" role="button" data-slide="true" data-widget="control-sidebar" title="SAIR DAS VENDAS">
                                         <span class="h1 text-uppercase">
                                             <i class="fas fa-power-off"></i>
                                         </span><br>
@@ -310,7 +310,7 @@
                                     @endif
 
                                     @if ($tipo_entidade_logado->empresa->inicializacao == 'N')
-                                    <a href="{{ route('caixa.fechamento_caixa') }}" title="SAIR DAS VENDAS" class="btn btn-danger col-12 col-md-12 px-2 py-4 text-center">
+                                    <a href="{{ route('caixa.fechamento_caixa', $checkCaixa->id) }}" title="SAIR DAS VENDAS" class="btn btn-danger col-12 col-md-12 px-2 py-4 text-center">
                                         <span class="h1 text-uppercase">
                                             <i class="fas fa-power-off"></i>
                                         </span><br>
@@ -528,7 +528,7 @@
 <script>
     var quantidade_final = 1;
     let precoPersonalizado = null;
-    
+
     // Função para validar o input
     function validateInput(input) {
         // Expressão regular para aceitar apenas números e pontos
@@ -539,6 +539,49 @@
             input.value = input.value.slice(0, -1);
         }
     }
+    
+//     logout_caixa
+// fechamento_caixa
+    
+    $(document).on('click', '.fechamento_caixa', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Desejo fazer o fechamento do caixa!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, desejo!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('caixa.fechamento_caixa', ':id') }}`.replace(':id', recordId), 
+                    method: 'GET', 
+                    data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }, beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }, success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem+ de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', xhr.responseJSON.message, 'error');
+                    }, 
+                });
+            }
+        });
+    });
 
     // Função para multiplicar os valores dos inputs
     function calculateMultiplication() {
@@ -566,7 +609,7 @@
     function salvarPrecoPersonalizado() {
         const preco = parseFloat(document.getElementById("precoPersonalizado").value);
         if (!isNaN(preco) && preco > 0) {
-            precoPersonalizado = preco;  // Define o preço personalizado para o próximo produto
+            precoPersonalizado = preco; // Define o preço personalizado para o próximo produto
             document.getElementById("precoPersonalizadoTexto").textContent = `${preco.toFixed(2)}`;
             $('#myModalPrecoPersonalizado').modal('hide');
             document.getElementById("botao_definir_preco_personalizado").style.display = 'none';
@@ -579,7 +622,7 @@
     function removerPrecoPersonalizado() {
         const preco = parseFloat(document.getElementById("precoPersonalizado").value);
         if (!isNaN(preco) && preco > 0) {
-            precoPersonalizado = null;  // Define o preço personalizado para o próximo produto
+            precoPersonalizado = null; // Define o preço personalizado para o próximo produto
             document.getElementById("precoPersonalizadoTexto").textContent = "";
             document.getElementById("botao_definir_preco_personalizado").style.display = 'inline-block';
             document.getElementById("botao_remover_preco_personalizado").style.display = 'none';
@@ -589,47 +632,47 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-                
+
         const input = document.getElementById('produto_codigo_barra_original');
         input.focus();
 
-        input.addEventListener('keydown', function (e) {
+        input.addEventListener('keydown', function(e) {
             // Bloqueia "Enter" ou outros atalhos específicos
             if (e.key === 'Enter' || (e.ctrlKey && e.key === 'j')) {
                 e.preventDefault();
-                
-                const produtoId = input.value.trim(); 
+
+                const produtoId = input.value.trim();
                 let quantidade = document.getElementById("result").value;
-                
+
                 fetch('/carrinho/adicionar-codigo-barra', {
-                    method: 'POST', 
-                    headers: {
-                        'Content-Type': 'application/json', 
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }, 
-                    body: JSON.stringify({
-                        produto_id: input.value,
-                        quantidade: quantidade,
+                        method: 'POST'
+                        , headers: {
+                            'Content-Type': 'application/json'
+                            , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                        , body: JSON.stringify({
+                            produto_id: input.value
+                            , quantidade: quantidade
+                        , })
                     })
-                })
-                .then(response => response.json())
-                .then(data => {
-                
-                    if (data.success) {
-                        atualizarCarrinho(data.carrinho, data.total);
-                        
-                        input.value = ''; // Limpa o campo de entrada
-                        input.focus(); // Retorna o foco ao campo
-                        
-                    } else {
-                        alert(data.message || 'Erro ao adicionar produto.');
-                    }
-                
-                });
-                
+                    .then(response => response.json())
+                    .then(data => {
+
+                        if (data.success) {
+                            atualizarCarrinho(data.carrinho, data.total);
+
+                            input.value = ''; // Limpa o campo de entrada
+                            input.focus(); // Retorna o foco ao campo
+
+                        } else {
+                            alert(data.message || 'Erro ao adicionar produto.');
+                        }
+
+                    });
+
             }
         })
-    
+
         // Função para atualizar o carrinho na tabela
         function atualizarCarrinho(carrinho, total) {
             let carrinhoItens = document.querySelector('#carrinho-itens tbody');
@@ -667,46 +710,46 @@
 
         // Função para adicionar um produto ao carrinho
         function adicionarAoCarrinho(produtoId, nome, preco, quantidade = 1) {
-            
+
             const precoUsado = precoPersonalizado !== null ? precoPersonalizado : preco;
-        
+
             fetch('/carrinho/adicionar', {
-                method: 'POST'
-                , headers: {
-                    'Content-Type': 'application/json'
-                    , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-                , body: JSON.stringify({
-                    produto_id: produtoId, 
-                    nome: nome, 
-                    preco: precoUsado, 
-                    quantidade: quantidade
+                    method: 'POST'
+                    , headers: {
+                        'Content-Type': 'application/json'
+                        , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                    , body: JSON.stringify({
+                        produto_id: produtoId
+                        , nome: nome
+                        , preco: precoUsado
+                        , quantidade: quantidade
+                    })
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // alert(data.message);
-                atualizarCarrinho(data.carrinho, data.total);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    // alert(data.message);
+                    atualizarCarrinho(data.carrinho, data.total);
+                });
         }
 
         // Função para remover um produto do carrinho
         function removerDoCarrinho(produtoId) {
             fetch('/carrinho/remover', {
-                method: 'DELETE', 
-                headers: {
-                    'Content-Type': 'application/json', 
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }, 
-                body: JSON.stringify({
-                    produto_id: produtoId
+                    method: 'DELETE'
+                    , headers: {
+                        'Content-Type': 'application/json'
+                        , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                    , body: JSON.stringify({
+                        produto_id: produtoId
+                    })
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // alert(data.message);
-                atualizarCarrinho(data.carrinho, data.total);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    // alert(data.message);
+                    atualizarCarrinho(data.carrinho, data.total);
+                });
         }
 
         // Evento para finalizar a venda
@@ -758,34 +801,36 @@
             };
 
             fetch('/carrinho/pagamento', {
-                    method: 'POST'
-                    , headers: {
-                        'Content-Type': 'application/json'
-                        , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                    , body: JSON.stringify(pagamentoData) // Converte o objeto para JSON
-                })
-                .then(response => response.json())
-                .then(data => {
+                method: 'POST'
+                , headers: {
+                    'Content-Type': 'application/json'
+                    , 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+                , body: JSON.stringify(pagamentoData) // Converte o objeto para JSON
+            })
+            .then(response => response.json())
+            .then(data => {
+
+                const baseUrl = `{{ route('factura-recibo-pos-venda') }}`;
+                const facturaId = data.data.factura.id; // Este valor pode vir dinamicamente do seu sistema
+
+                // Construir a URL completa
+                const url = `${baseUrl}?factura=${facturaId}`;
+
+                // Redirecionar
+                window.location.href = url;
+
+                // Abrir uma nova janela com os dados como parâmetros na URL
+                //window.location.href = `/dashboard/factura-recibos-pos-venda?factura=${data.data.factura.id}`;
+                return
+
+            }).catch(function(error) {
+                // Erro: captura e lida com o erro
+                // alert(`Erro no pagamento: ${error.message}`);
+                showMessage('Erro!', 'Correu um erro ao tentar realizar a venda, provavélemente tentaste fazer um venda por multicaixa ou pagamento duplo, verifica se o TPA esta activo no sistema!', 'error');
                 
-                    const baseUrl = `{{ route('factura-recibo-pos-venda') }}`;
-                    const facturaId = data.data.factura.id; // Este valor pode vir dinamicamente do seu sistema
-                    
-                    // Construir a URL completa
-                    const url = `${baseUrl}?factura=${facturaId}`;
-                    
-                    // Redirecionar
-                    window.location.href = url;
-
-                    // Abrir uma nova janela com os dados como parâmetros na URL
-                    //window.location.href = `/dashboard/factura-recibos-pos-venda?factura=${data.data.factura.id}`;
-                    return
-
-                }).catch(error => {
-                    // Erro: captura e lida com o erro
-                    // alert(`Erro no pagamento: ${error.message}`);
-                    console.error('Detalhes do erro:', error);
-                });
+                console.error('Detalhes do erro:', error);
+            });
         });
 
         // Usar delegação de eventos para capturar cliques em elementos adicionados dinamicamente
@@ -800,57 +845,19 @@
 
         });
 
-        // $("#produto_codigo_barra").on("input", function(e) {
-        //     e.preventDefault()
-        //     var produto = $("#produto_codigo_barra").val()
-
-        //     $.ajax({
-        //         method: "GET"
-        //         , url: "buscar-produto-codigo-barra"
-        //         , data: {
-        //             produto: produto
-        //         }
-        //         , beforeSend: function() {
-        //             // $(".ajax_load").fadeIn(200).css("display", "flex");
-        //         }
-        //         , success: function(response) {
-        //             $("#carregar_produtos").html("")
-
-        //             var btn = "";
-
-        //             if (response.produtos.estoque.stock <= response.produtos.estoque.stock_minimo) {
-        //                 btn = "bg-danger";
-        //             } else {
-        //                 btn = "bg-info";
-        //             }
-
-        //             $('#carregar_produtos').append('<div class="col-6 col-md-3 col-lg-2">\
-        //                 <a href="adicionar-produto/' + response.produtos.id + '">\
-        //                     <div class="card shadow-sm bg-light">\
-        //                         <div class="card-body ' + btn + '" ">\
-        //                             <div class="col-12 col-md-12 col-sm-12">\
-        //                                 <h6 class="pt-3 text-uppercase text-dark">' + response.produtos.nome + '</h6>\
-        //                                 <p class="text-dark"><strong>' + response.produtos.preco_venda + '<small>' + response.loja.moeda + '</small></strong></p>\
-        //                             </div>\
-        //                         </div>\
-        //                     </div>\
-        //                 </a>\
-        //             </div>');
-
-        //         }
-        //     })
-
-        //     $("#produto_codigo_barra").val("");
-        //     window.location.reload();
-        // })    
-
         // Exemplo de uso: adicionar um produto ao carrinho
         document.querySelectorAll('.adicionar-carrinho').forEach(button => {
             button.addEventListener('click', function() {
                 let produtoId = this.getAttribute('data-id');
                 let nome = this.getAttribute('data-nome');
                 let preco = this.getAttribute('data-preco');
-
+                let stock = this.getAttribute('data-stock');
+                
+                if(stock <= 0){
+                    showMessage('Alerta!', 'Quantidade no stock insuficiente para realizar qualquer venda.!', 'warning');
+                    return
+                }
+                
                 let quantidade = document.getElementById("result").value;
 
                 adicionarAoCarrinho(produtoId, nome, preco, quantidade);
@@ -1021,16 +1028,15 @@
             var produto = $("#produto").val()
 
             $.ajax({
-                method: "GET", 
-                url: "buscar-produto", 
-                data: {
+                method: "GET"
+                , url: "buscar-produto"
+                , data: {
                     produto: produto
                 }
                 , beforeSend: function() {
                     // $(".ajax_load").fadeIn(200).css("display", "flex");
                 }
                 , success: function(response) {
-                    console.log(response)
                     $("#carregar_produtos").html("")
                     for (let index = 0; index < response.produtos.length; index++) {
 
@@ -1062,11 +1068,10 @@
         })
     });
 
-            
     $(document).ready(function() {
         $('#abertura_caixa_create').on('submit', function(e) {
             e.preventDefault(); // Impede o envio tradicional do formulário
-            
+
             let form = $(this);
             let formData = form.serialize(); // Serializa os dados do formulário
 
@@ -1076,22 +1081,22 @@
                 data: formData, // Dados do formulário
                 headers: {
                     "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
-                },
-                beforeSend: function() {
+                }
+                , beforeSend: function() {
                     // Você pode adicionar um loader aqui, se necessário
                     progressBeforeSend();
-                }, 
-                success: function(response) {
+                }
+                , success: function(response) {
                     // Feche o alerta de carregamento
                     Swal.close();
 
-                    showMessage('Sucesso!', 'Seja bem vindo ao sistema!', 'success');
+                    showMessage('Sucesso!', 'Operação realizada com sucesso.!', 'success');
 
                     window.location.href = response.redirect;
 
                     // window.location.reload();
-                }, 
-                error: function(xhr) {
+                }
+                , error: function(xhr) {
                     // Feche o alerta de carregamento
                     Swal.close();
                     // Trata erros e exibe mensagens para o usuário
@@ -1105,12 +1110,10 @@
                     } else {
                         showMessage('Erro!', xhr.responseJSON.message, 'error');
                     }
-                }, 
-            });
+                }
+            , });
         });
     });
-    
 
 </script>
-
 @endsection

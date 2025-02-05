@@ -311,7 +311,7 @@ class ClienteController extends Controller
         }
 
         
-        return redirect()->route('clientes.index')->with("success", "Dados Cadastrar com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
     }
 
     /**
@@ -588,7 +588,7 @@ class ClienteController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
 
-        return redirect()->route('clientes.index')->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
     }
 
     /**

@@ -66,12 +66,11 @@ class AppController extends Controller
             'password.min' => 'A senha deve ter no minimo 3 caracteres',
             'password.max' => 'A senha deve ter no maximo 20 caracteres',
         ]);
-        
 
         $credencias = $request->only('email', 'password');
 
         if (Auth::attempt($credencias)) {
-            
+          
             if(Auth::user()->level == 2 || Auth::user()->level == 3){
                 return response()->json(['success' => true, 'redirect' => route('dashboard-admin')]);
                 // return redirect()->route('dashboard-admin')->with('success', 'Seja Bem-Vindo ao Sistema!');
@@ -82,12 +81,14 @@ class AppController extends Controller
                 $controlo = Entidade::findOrFail(Auth::user()->entidade_id);
             
                 if($controlo->dias_licencas($controlo->id) <= 0){
-                    return response()->json(['success' => true, 'redirect' => route('login')]);
+                    return response()->json(['message' => "Infelizmente não podes acessar o sistema, a sua licença expirou.!"], 404);
+                    // return response()->json(['success' => true, 'redirect' => route('login')]);
                     // return redirect()->route('login')->with('danger', "Infelizmente não podes acessar o sistema, a sua licença expirou.!");
                 }
                 
                 if($controlo->status == "desactivo"){
-                    return response()->json(['success' => true, 'redirect' => route('login')]);
+                    return response()->json(['message' => "Infelizmente a sua conta ainda não está activa, entra em contacto com os admininstradores do sistema pelos contactos no rodape.!"], 404);
+                    // return response()->json(['success' => true, 'redirect' => route('login')]);
                     // return redirect()->route('login')->with('danger', "Infelizmente a sua conta ainda não está activa, entra em contacto com os admininstradores do sistema pelos contactos no rodape.!");
                 }
             
@@ -135,11 +136,11 @@ class AppController extends Controller
             }
 
         } else {
-            
             $user = User::where('email', '=', $request->email)->first();   
                         
             if (!$user) {  
-                return response()->json(['success' => true, 'redirect' => route('login')]);
+                return response()->json(['message' => "Usuário não encontrado, por favor verifica o seu E-mail!"], 404);
+                // return response()->json(['success' => true, 'redirect' => route('login')]);
                 // return redirect()->route('login')->with('danger', 'erro ao tentar efectuar o login!');
             }
                         
@@ -198,7 +199,6 @@ class AppController extends Controller
             'r_password.max' => 'Confirmar senha deve ter no maximo 20 caracteres',
             'nif.required' => 'O nif é um campo obrigatório',
         ]);
-        
         
         try {
             // Inicia a transação

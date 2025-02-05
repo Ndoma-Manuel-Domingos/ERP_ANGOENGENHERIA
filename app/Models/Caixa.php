@@ -40,12 +40,34 @@ class Caixa extends Model
         'grupo_precos',
         'numeracao_pedidos_mesa',
         'user_id',
+        'user_open_id',
+        'user_close_id',
         'loja_id',
         'entidade_id',
     ];
 
+    public function user_open()
+    {
+        return $this->belongsTo(User::class, 'user_open_id', 'id');
+    }
+
+    public function user_close()
+    {
+        return $this->belongsTo(User::class, 'user_close_id', 'id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
     public function loja()
     {
         return $this->belongsTo(Loja::class);
+    }
+
+    public function entidade()
+    {
+        return $this->belongsTo(Entidade::class, 'entidade_id', 'id');
     }
 }

@@ -115,7 +115,7 @@ class CategoriaCargoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
       
     }
 
@@ -217,7 +217,7 @@ class CategoriaCargoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
 
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
 
     }
 
@@ -235,7 +235,6 @@ class CategoriaCargoController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
-        
         //
         try {
             DB::beginTransaction();
@@ -252,7 +251,8 @@ class CategoriaCargoController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-        return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluídos com sucesso!"], 200);
 
     }
 

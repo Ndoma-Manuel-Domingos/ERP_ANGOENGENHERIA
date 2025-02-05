@@ -8,6 +8,7 @@ use App\Models\Departamento;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 
 class CargoController extends Controller
@@ -94,23 +95,33 @@ class CargoController extends Controller
         ],[
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
-
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
-        $categoria = Cargo::create([
-            'entidade_id' => $entidade->empresa->id, 
-            'departamento_id' => $request->departamento_id, 
-            'salario_base' => $request->salario_base, 
-            'nome' => $request->nome,
-            'status' => $request->status,
-            'user_id' => Auth::user()->id,
-        ]);
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+            
+            Cargo::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'departamento_id' => $request->departamento_id, 
+                'salario_base' => $request->salario_base, 
+                'nome' => $request->nome,
+                'status' => $request->status,
+                'user_id' => Auth::user()->id,
+            ]);
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        if($categoria->save()){
-            return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar cadastrar cargo");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+
     }
 
     
@@ -197,14 +208,26 @@ class CargoController extends Controller
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
 
-        $cargo = Cargo::findOrFail($id);
-        $cargo->update($request->all());
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
 
-        if($cargo->update()){
-            return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Actualizar cargo");
+            $cargo = Cargo::findOrFail($id);
+            $cargo->update($request->all());
+
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
+
     }
 
         /**
@@ -222,12 +245,26 @@ class CargoController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $cargo = Cargo::findOrFail($id);
-        if($cargo->delete()){
-            return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Excluir cargo");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            
+            $cargo = Cargo::findOrFail($id);
+            $cargo->delete();
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluído com sucesso!"], 200);
+
     }
 
 }

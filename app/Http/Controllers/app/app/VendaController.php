@@ -430,7 +430,7 @@ class VendaController extends Controller
                 $query->whereIn('tipo', ['P', 'S']);                
             })
             ->get(),
-            "produtos" => Produto::with(['marca', 'variacao', 'estoque'])
+            "produtos" => Produto::with(['marca', 'variacao', 'estoque', 'estoques'])
                 ->whereIn('tipo', ['P', 'S'])
                 ->where('entidade_id', $entidade->empresa->id)
                 ->get(),
@@ -1210,19 +1210,42 @@ class VendaController extends Controller
         try {
             // Inicia a transação
             DB::beginTransaction();
-                    
-            $movimento = Itens_venda::findOrFail($id);
-    
-            $produto = Produto::with('estoque')->findOrFail($movimento->produto_id);
-            $produto->estoque->stock = $produto->estoque->stock + $movimento->quantidade;
-            $produto->estoque->update();
             
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+                    
             $loja = Loja::where([
-               ['status', '=', 'activo'],
-               ['entidade_id', '=', $entidade->empresa->id], 
-           ])->first();
-           
+                ['status', '=', 'activo'],
+                ['entidade_id', '=', $entidade->empresa->id], 
+            ])->first();
+            
+            if(!$loja){
+                Alert::warning('Atenção', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto. Por favor activa uma loja/armazém que tem este produto!');
+                return redirect()->back()->with('warning', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto.');
+            }
+            
+            $movimento = Itens_venda::findOrFail($id);
+            
+            $produto = Produto::with('estoque')->findOrFail($movimento->produto_id);
+                                       
+            $gestao_quantidade = Estoque::where('loja_id', $loja->id)
+                ->where('produto_id', $movimento->produto_id)
+                ->where('stock', '>', 1)
+                ->where('entidade_id', $entidade->empresa->id)
+                ->first();
+                
+            // Atualiza o estoque
+            if ($produto->tipo == 'P') {
+                $update_gestao_quantidade = Estoque::find($gestao_quantidade->id);
+                if($update_gestao_quantidade){
+                    $update_gestao_quantidade->stock = $update_gestao_quantidade->stock + $movimento->quantidade; 
+                    $update_gestao_quantidade->update(); 
+                }
+            }     
+    
+            // $produto = Produto::with('estoque')->findOrFail($movimento->produto_id);
+            // $produto->estoque->stock = $produto->estoque->stock + $movimento->quantidade;
+            // $produto->estoque->update();
+                       
             Registro::create([
                "registro" => "Entrada de Stock",
                "data_registro" => date('Y-m-d'),
@@ -1398,11 +1421,11 @@ class VendaController extends Controller
                 return redirect()->back();    
             }
             
-            $contador_facturas = Venda::where('factura', $request->documento)->where('ano_factura', date("Y"))->where('entidade_id', $entidade->empresa->id)->count();
-            $ano_ = date("Y");
+            $contador_facturas = Venda::where('factura', $request->documento)->where('ano_factura', $entidade->empresa->ano_factura)->where('entidade_id', $entidade->empresa->id)->count();
+            
             $numeroFacturaDoc = $contador_facturas + 1;
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
-            $designacao_factura = "{$request->documento} {$codigo_designacao_factura}{$ano_}/{$numeroFacturaDoc}";
+           
+            $designacao_factura = "{$request->documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFacturaDoc}";
              
             $request->total_pagar = (int) $request->total_pagar;
             
@@ -1414,6 +1437,7 @@ class VendaController extends Controller
                     OperacaoFinanceiro::create([
                         'nome' => $designacao_factura,
                         'status' => "pago",
+                        'formas' => "C",
                         'motante' => $request->total_pagar,
                         'subconta_id' => $subconta_caixa->id,
                         'cliente_id' => $cliente->id,
@@ -1457,6 +1481,7 @@ class VendaController extends Controller
                         OperacaoFinanceiro::create([
                             'nome' => $designacao_factura,
                             'status' => "pago",
+                            'formas' => "B",
                             'motante' => $request->total_pagar,
                             'subconta_id' => $subconta_banco->id,
                             'cliente_id' => $cliente->id,
@@ -1500,6 +1525,7 @@ class VendaController extends Controller
                         OperacaoFinanceiro::create([
                             'nome' => $designacao_factura,
                             'status' => "pago",
+                            'formas' => "C",
                             'motante' => $request->valor_entregue_input,
                             'subconta_id' => $subconta_caixa->id,
                             'cliente_id' => $cliente->id,
@@ -1526,6 +1552,7 @@ class VendaController extends Controller
                         OperacaoFinanceiro::create([
                             'nome' => $designacao_factura,
                             'status' => "pago",
+                            'formas' => "B",
                             'motante' => $request->valor_entregue_multicaixa_input,
                             'subconta_id' => $subconta_banco->id,
                             'cliente_id' => $cliente->id,
@@ -1624,7 +1651,6 @@ class VendaController extends Controller
                         'periodo_id' => 12,
                     ]);
                     
-                    
                     $movimeto = Movimento::create([
                         'user_id' => Auth::user()->id,
                         'subconta_id' => $subconta_banco->id,
@@ -1652,13 +1678,13 @@ class VendaController extends Controller
    
             $contarFactura = Venda::where([
                 ['factura', '=', $request->documento],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id], 
             ])->count();
     
             $ultimoRecibo = Venda::where([
                 ['factura', '=', $request->documento],
-                ['ano_factura', '=', date("Y")],
+                ['ano_factura', '=', $entidade->empresa->ano_factura],
                 ['entidade_id', '=', $entidade->empresa->id],
             ])
             ->orderBy('id', 'DESC')
@@ -1677,7 +1703,6 @@ class VendaController extends Controller
     
             // $datactual = Carbon::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'));
     
-            $ano = date("Y");
             $numeroFactura = $contarFactura + 1;
     
             $rsa = new RSA(); //Algoritimo RSA
@@ -1688,13 +1713,12 @@ class VendaController extends Controller
             // Lendo a private key
             $rsa->loadKey($privatekey);
         
-            $codigo_designacao_factura = ENV('DESIGNACAO_FACTURA');
             
             /**
             * Texto que deverá ser assinado com a assinatura RSA::SIGNATURE_PKCS1, e o Texto estará mais ou menos assim após as
             * Concatenações com os dados preliminares da factura: 2020-09-14;2020-09-14T20:34:09;FP PAT2020/1;457411.2238438; */
     
-            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->documento} {$codigo_designacao_factura}{$ano}/{$numeroFactura}" . ';' . number_format($request->total_pagar, 2, ".", "") . ';' . $hashAnterior;
+            $plaintext = $datactual->format('Y-m-d') . ';' . str_replace(' ', 'T', $datactual) . ';' . "{$request->documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}" . ';' . number_format($request->total_pagar, 2, ".", "") . ';' . $hashAnterior;
             
             // HASH
             $hash = 'sha1'; // Tipo de Hash
@@ -1747,7 +1771,7 @@ class VendaController extends Controller
                 'valor_total' => $request->total_pagar,
                 'valor_troco' => $request->valor_entregue - $request->total_pagar,
                 'code' => $code,
-                'ano_factura' => $ano,
+                'ano_factura' => $entidade->empresa->ano_factura,
 				'nome_cliente' => $request->nomeCliente ?? $cliente->nome,
 				'documento_nif' => $request->nomeNIF ?? $cliente->nif,
                 'desconto' => 0,
@@ -1759,7 +1783,7 @@ class VendaController extends Controller
                 'data_disponivel' => date("y-m-d"),
                 'pagamento' => $formaPagamento->tipo,
                 'factura' => $request->documento,
-                'factura_next' => "{$request->documento} {$codigo_designacao_factura}{$ano}/{$numeroFactura}",
+                'factura_next' => "{$request->documento} {$entidade->empresa->sigla_factura}{$entidade->empresa->ano_factura}/{$numeroFactura}",
                 'observacao' => "venda realizada com sucesso!",
                 'referencia' => "venda realizada com sucesso!",
     
@@ -1894,7 +1918,6 @@ class VendaController extends Controller
             
             foreach($movimentos as $car){
                 
-                dd($car);
             
                 $subconta_iva = Subconta::where('numero', ENV('IVA_LIQUIDADO'))->first();
                 $produt = Produto::findOrFail($car->produto_id); 
@@ -2522,137 +2545,119 @@ class VendaController extends Controller
 
     public function actualizar_vendas_factura_update(Request $request, $id)
     {
+
         try {
             // Inicia a transação
             DB::beginTransaction();
-        
+
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
             $movimento = Itens_venda::with('produto')->findOrFail($id);
             
             $quantidade_final = $request->input1 * $request->input2 * $request->quantidade;
             
             $produto = Produto::with('estoque')->findOrFail($movimento->produto_id);
+      
+            $loja = Loja::where([
+               ['status', '=', 'activo'],
+               ['entidade_id', '=', $entidade->empresa->id], 
+            ])->first();
             
-            if($movimento){
-                $loja = Loja::where([
-                   ['status', '=', 'activo'],
-                   ['entidade_id', '=', $entidade->empresa->id], 
-                ])->first();
-                
-                if ($produto->tipo == 'P') {
-                        
-                    if(!$loja){
-                        Alert::warning('Atenção', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto. Por favor activa uma loja/armazém que tem este produto!');
-                        return redirect()->back()->with('warning', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto.');
-                    }
+            if ($produto->tipo == 'P') {
                     
-                    // verificar quantidade de produto no estoque da loja
-                    $verificar_quantidade = Estoque::where('loja_id', $loja->id)
-                        ->where('produto_id', $movimento->produto_id)
-                        ->where('entidade_id', $entidade->empresa->id)
-                        ->sum('stock');
-                        
-                    $stock_gestao = Estoque::where('loja_id', $loja->id)
-                        ->where('produto_id', $movimento->produto_id)
-                        ->where('entidade_id', $entidade->empresa->id)
-                        ->first();
-                    
-                    $verificar_quantidade = (int) $verificar_quantidade;
-                    
-                    if($quantidade_final > $verificar_quantidade){
-                        Alert::warning('Atenção', 'A Loja activa não têm esta quantidade de produto em stock para poder comercializar!');
-                        return redirect()->back()->with('warning', 'A Loja activa não têm esta quantidade de produto em stock para poder comercializar!');
-                    }
-        
-                    if($quantidade_final > $verificar_quantidade){
-                        Alert::warning('Atenção', 'A quantidade Adiciona nesta compra e maior do que a existente no Stock!');
-                        return redirect()->back()->with('danger', 'A quantidade Adiciona nesta compra e maior do que a existente no Stock!');
-                    }
-                }
-    
-                $desconto = ($request->preco_unitario * $quantidade_final) * ($request->desconto_aplicado ?? 0) / 100;
-    
-                // $produto->estoque->stock = ($produto->estoque->stock + $movimento->quantidade) - $quantidade_final;
-    
-                $valorBase = $request->preco_unitario * $quantidade_final; 
-                // calculo do iva
-                $valorIva = ($produto->taxa ?? 0) / 100 * $valorBase;
-                
-                $retencao_fonte = 0;
-                
-                if($produto->tipo == "S"){
-                    $valor_ = $valorBase + $valorIva;
-                    $retencao_fonte = $valor_ * $entidade->empresa->taxa_retencao_fonte / 100;
-                }else {
-                    $retencao_fonte = 0;
-                }
-    
-                $movimento->quantidade = $quantidade_final;
-                $movimento->valor_pagar = ($valorBase + $valorIva) - $desconto;
-                $movimento->preco_unitario = $request->preco_unitario;
-    
-                $movimento->valor_base = $valorBase;
-                $movimento->valor_iva = $valorIva;
-                $movimento->retencao_fonte = $retencao_fonte;
-    
-                $movimento->desconto_aplicado = $request->desconto_aplicado;
-                $movimento->desconto_aplicado_valor = $desconto;
-    
-                $movimento->iva = $request->iva;
-                $movimento->texto_opcional = $request->texto_opcional;
-                $movimento->numero_serie = $request->numero_serie;
-                
-                if ($produto->tipo == 'P') {
-                    if($movimento->update()){
-                        
-                        $stock = Estoque::find($stock_gestao->id);
-                        if($stock){
-                           $stock->stock = ($stock->stock  + $movimento->quantidade) - $quantidade_final; 
-                           $stock->update(); 
-                        }
-                    
-                    }else{
-                        Alert::error('Erro', 'Ao tentar actualizar os dodos deste produto nesta venda');
-                        return redirect()->route('facturas.create')->with('Aconteceu um erro por isso não concluimos facturação deste produto!');
-                    }
-                    
-                    if($quantidade_final > $request->quantidade_anterior){
-                    
-                        Registro::create([
-                           "registro" => "Saída de Stock",
-                           "data_registro" => date('Y-m-d'),
-                           "quantidade" => (int) $quantidade_final - (int) $request->quantidade_anterior,
-                           "produto_id" => $produto->id,
-                           "observacao" => "Saída de produto {$produto->nome} para venda",
-                           "loja_id" => $loja->id,
-                           "lote_id" => NULL,
-                           "user_id" => Auth::user()->id,
-                           'entidade_id' => $entidade->empresa->id,
-                       ]);
-                       
-                    }else if($quantidade_final < $request->quantidade_anterior){
-                    
-                        Registro::create([
-                           "registro" => "Saída de Stock",
-                           "data_registro" => date('Y-m-d'),
-                           "quantidade" => (int) $request->quantidade_anterior - (int) $quantidade_final,
-                           "produto_id" => $produto->id,
-                           "observacao" => "Saída de produto {$produto->nome} para venda",
-                           "loja_id" => $loja->id,
-                           "lote_id" => NULL,
-                           "user_id" => Auth::user()->id,
-                           'entidade_id' => $entidade->empresa->id,
-                       ]);
-                    }
-                }else {
-                    $movimento->update();
+                if(!$loja){
+                    Alert::warning('Atenção', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto. Por favor activa uma loja/armazém que tem este produto!');
+                    return redirect()->back()->with('warning', 'Não têm nenhuma loja/armazém activa no momento para registrar saída deste produto.');
                 }
                 
-            }else{
-                Alert::error('Erro', 'Ao tentar actualizar os dodos deste produto nesta venda');
-                return redirect()->route('facturas.create');
+                // verificar quantidade de produto no estoque da loja
+                $verificar_quantidade = Estoque::where('loja_id', $loja->id)
+                    ->where('produto_id', $movimento->produto_id)
+                    ->where('stock', '>', 1)
+                    ->where('entidade_id', $entidade->empresa->id)
+                    ->sum('stock');
+                
+                $stock_gestao = Estoque::where('loja_id', $loja->id)
+                    ->where('produto_id', $movimento->produto_id)
+                    ->where('stock', '>', 1)
+                    ->where('entidade_id', $entidade->empresa->id)
+                    ->first();
+                
+                $verificar_quantidade = (int) $verificar_quantidade;
+                
+                if($quantidade_final > $verificar_quantidade){
+                    Alert::warning('Atenção', 'A quantidade adicionada nesta compra é maior do que a disponível em estoque.');
+                    return redirect()->back()->with('danger', 'A quantidade adicionada nesta compra é maior do que a disponível em estoque.');
+                }
             }
-    
+
+            $desconto = ($request->preco_unitario * $quantidade_final) * ($request->desconto_aplicado ?? 0) / 100;
+
+            $valorBase = $request->preco_unitario * $quantidade_final; 
+            // calculo do iva
+            $valorIva = ($produto->taxa ?? 0) / 100 * $valorBase;
+            
+            $retencao_fonte = 0;
+            
+            if($produto->tipo == "S"){
+                $valor_ = $valorBase + $valorIva;
+                $retencao_fonte = $valor_ * $entidade->empresa->taxa_retencao_fonte / 100;
+            }else {
+                $retencao_fonte = 0;
+            }
+
+            $movimento->quantidade = $quantidade_final;
+            $movimento->valor_pagar = ($valorBase + $valorIva) - $desconto;
+            $movimento->preco_unitario = $request->preco_unitario;
+
+            $movimento->valor_base = $valorBase;
+            $movimento->valor_iva = $valorIva;
+            $movimento->retencao_fonte = $retencao_fonte;
+
+            $movimento->desconto_aplicado = $request->desconto_aplicado;
+            $movimento->desconto_aplicado_valor = $desconto;
+
+            $movimento->iva = $request->iva;
+            $movimento->texto_opcional = $request->texto_opcional;
+            $movimento->numero_serie = $request->numero_serie;
+            
+            $movimento->update();
+            
+            
+            if ($produto->tipo == 'P') {
+                $stock = Estoque::find($stock_gestao->id);
+                
+                if($stock){
+                   $stock->stock = ($stock->stock + $request->quantidade_anterior) - $quantidade_final; 
+                   $stock->update(); 
+                }
+               
+                if($quantidade_final > $request->quantidade_anterior){
+                    Registro::create([
+                       "registro" => "Saída de Stock",
+                       "data_registro" => date('Y-m-d'),
+                       "quantidade" => (int) $quantidade_final - (int) $request->quantidade_anterior,
+                       "produto_id" => $produto->id,
+                       "observacao" => "Saída de produto {$produto->nome} para venda",
+                       "loja_id" => $loja->id,
+                       "lote_id" => NULL,
+                       "user_id" => Auth::user()->id,
+                       'entidade_id' => $entidade->empresa->id,
+                   ]);
+                   
+                }else if($quantidade_final < $request->quantidade_anterior){
+                    Registro::create([
+                       "registro" => "Saída de Stock",
+                       "data_registro" => date('Y-m-d'),
+                       "quantidade" => (int) $request->quantidade_anterior - (int) $quantidade_final,
+                       "produto_id" => $produto->id,
+                       "observacao" => "Saída de produto {$produto->nome} para venda",
+                       "loja_id" => $loja->id,
+                       "lote_id" => NULL,
+                       "user_id" => Auth::user()->id,
+                       'entidade_id' => $entidade->empresa->id,
+                   ]);
+                }
+            }
         
             // Comita a transação se tudo estiver correto
             DB::commit();

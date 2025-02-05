@@ -202,39 +202,56 @@ class FuncionarioController extends Controller
             $code = uniqid(time());
             $nova_conta = "";
             
-            $conta = Conta::where('conta', '36')->first();
             
-            if($conta){
-                $c_ = Conta::findOrFail($conta->id);
-                $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
-                
-                $numero =  $subc_ + 1;
-                
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                $conta = Conta::where('conta', '36')->first();
+                if($conta){
+                    $c_ = Conta::findOrFail($conta->id);
+                    $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
+                    
+                    $numero =  $subc_ + 1;
+                    
+                    if($request->categoria == "Orgão Sociais"){
+                        $nova_conta = $c_->conta. "." . $c_->serie . ".1." . $numero;
+                    }
+                    if($request->categoria == "Empregados"){
+                        $nova_conta = $c_->conta. "." . $c_->serie . ".2." . $numero;
+                    }
+                    if($request->categoria == "Pessoal"){
+                        $nova_conta = $c_->conta. "." . $c_->serie . ".3." . $numero;
+                    }
+                    
+                    $subconta = Subconta::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'numero' => $nova_conta,
+                        'nome' => $request->nome,
+                        'tipo_conta' => 'M',
+                        'code' => $code,
+                        'status' => $c_->status,
+                        'conta_id' => $c_->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }else{
+                    ######################
+                    ## depois vamos dar o tratamento
+                }
+            }else {
+            
                 if($request->categoria == "Orgão Sociais"){
-                    $nova_conta = $c_->conta. "." . $c_->serie . ".1." . $numero;
+                    $numero_inicial = "36.1.1.";
                 }
                 if($request->categoria == "Empregados"){
-                    $nova_conta = $c_->conta. "." . $c_->serie . ".2." . $numero;
+                    $numero_inicial = "36.1.2.";
                 }
                 if($request->categoria == "Pessoal"){
-                    $nova_conta = $c_->conta. "." . $c_->serie . ".3." . $numero;
+                    $numero_inicial = "36.1.2.";
                 }
+            
+                $subc_ = Funcionario::where('conta', 'like', $numero_inicial. "%")->where('entidade_id', $entidade->empresa->id)->count();
                 
-                $subconta = Subconta::create([
-                    'entidade_id' => $entidade->empresa->id, 
-                    'numero' => $nova_conta,
-                    'nome' => $request->nome,
-                    'tipo_conta' => 'M',
-                    'code' => $code,
-                    'status' => $c_->status,
-                    'conta_id' => $c_->id,
-                    'user_id' => Auth::user()->id,
-                ]);
-            }else{
-                ######################
-                ## depois vamos dar o tratamento
+                $numero =  $subc_ + 1;
+                $nova_conta = "{$numero_inicial}{$numero}";     
             }
-                   
             
             $funcionario = Funcionario::create([
                 'conta' => $nova_conta,
@@ -278,7 +295,6 @@ class FuncionarioController extends Controller
                 'entidade_id' => $entidade->empresa->id,      
             ]);
             
-            
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
             DB::commit();
         } catch (\Exception $e) {
@@ -289,7 +305,8 @@ class FuncionarioController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-        return redirect()->route('funcionarios.index')->with("success", "Dados Cadastrar com Sucesso!");
+        
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
 
     }
 
@@ -398,56 +415,78 @@ class FuncionarioController extends Controller
         try {
             DB::beginTransaction();
             
-            
             $code = uniqid(time());
             $nova_conta = "";
             
-            $conta = Conta::where('conta', '36')->first();
-                        
-            if($funcionario->code == NULL){
-                if($conta){
-                
-                    $c_ = Conta::findOrFail($conta->id);
-                    $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
-                    $numero =  $subc_ + 1;
+            if($entidade->empresa->tem_permissao("Gestão Contabilidade")){
+                $conta = Conta::where('conta', '36')->first();
+                            
+                if($funcionario->code == NULL){
+                    if($conta){
                     
+                        $c_ = Conta::findOrFail($conta->id);
+                        $subc_ = Subconta::where('conta_id', $c_->id)->where('entidade_id', $entidade->empresa->id)->count();
+                        $numero =  $subc_ + 1;
+                        
+                        if($request->categoria == "Orgão Sociais"){
+                            $nova_conta = $c_->conta. "." . $c_->serie . ".1." . $numero;
+                        }
+                        if($request->categoria == "Empregados"){
+                            $nova_conta = $c_->conta. "." . $c_->serie . ".2." . $numero;
+                        }
+                        if($request->categoria == "Pessoal"){
+                            $nova_conta = $c_->conta. "." . $c_->serie . ".3." . $numero;
+                        }
+                        
+                        $subconta = Subconta::create([
+                            'entidade_id' => $entidade->empresa->id, 
+                            'numero' => $nova_conta,
+                            'nome' => $request->nome,
+                            'tipo_conta' => 'M',
+                            'code' => $code,
+                            'status' => $c_->status,
+                            'conta_id' => $c_->id,
+                            'user_id' => Auth::user()->id,
+                        ]);
+                    }else{
+                        ######################
+                        ## depois vamos dar o tratamento
+                    }
+                }else {
+                    $subc_ = Subconta::where('code', $funcionario->code)->where('entidade_id', $entidade->empresa->id)->first();
+                    $nova_conta = $funcionario->conta;
+                    if($subc_){
+                        $subc_up = Subconta::findOrFail($subc_->id);
+                        $subc_up->numero = $nova_conta;
+                        $subc_up->code = $code;
+                        $subc_up->nome = $request->nome;
+                        $subc_up->update();
+                    }
+                    
+                    ## continuição para edição das categorias
+                }
+            }else{
+            
+                if($request->categoria == $funcionario->categoria){
+                    $nova_conta = $funcionario->conta;
+                }else {
                     if($request->categoria == "Orgão Sociais"){
-                        $nova_conta = $c_->conta. "." . $c_->serie . ".1." . $numero;
+                        $numero_inicial = "36.1.1.";
                     }
                     if($request->categoria == "Empregados"){
-                        $nova_conta = $c_->conta. "." . $c_->serie . ".2." . $numero;
+                        $numero_inicial = "36.1.2.";
                     }
                     if($request->categoria == "Pessoal"){
-                        $nova_conta = $c_->conta. "." . $c_->serie . ".3." . $numero;
+                        $numero_inicial = "36.1.2.";
                     }
-                    
-                    $subconta = Subconta::create([
-                        'entidade_id' => $entidade->empresa->id, 
-                        'numero' => $nova_conta,
-                        'nome' => $request->nome,
-                        'tipo_conta' => 'M',
-                        'code' => $code,
-                        'status' => $c_->status,
-                        'conta_id' => $c_->id,
-                        'user_id' => Auth::user()->id,
-                    ]);
-                }else{
-                    ######################
-                    ## depois vamos dar o tratamento
-                }
-            }else {
-                $subc_ = Subconta::where('code', $funcionario->code)->where('entidade_id', $entidade->empresa->id)->first();
-                $nova_conta = $funcionario->conta;
-                if($subc_){
-                    $subc_up = Subconta::findOrFail($subc_->id);
-                    $subc_up->numero = $nova_conta;
-                    $subc_up->code = $code;
-                    $subc_up->nome = $request->nome;
-                    $subc_up->update();
-                }
                 
-                ## continuição para edição das categorias
+                    $subc_ = Funcionario::where('conta', 'like', $numero_inicial. "%")->where('entidade_id', $entidade->empresa->id)->count();
+                    
+                    $numero =  $subc_ + 1;
+                    $nova_conta = "{$numero_inicial}{$numero}";    
+                }
             }
+            
                         
             $funcionario->conta = $nova_conta;
             $funcionario->code = $code;
@@ -501,7 +540,7 @@ class FuncionarioController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->route('funcionarios.index')->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
  
     }
 
@@ -520,13 +559,26 @@ class FuncionarioController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
+        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+            
+            $funcionario = Funcionario::findOrFail($id);
+            $funcionario->delete();
+            
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        $funcionario = Funcionario::findOrFail($id);
-        if($funcionario->delete()){
-            return redirect()->route('funcionarios.index')->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->route('funcionarios.index')->with("warning", "Erro ao tentar Excluir Funcionários");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+       
+        return response()->json(['message' => 'Dados Excluido com sucesso!'], 200);
+
     }
 
 }

@@ -175,9 +175,8 @@ class PacoteSalarialController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-
         
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
   
     }
 
@@ -336,7 +335,7 @@ class PacoteSalarialController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Salvos com sucesso!"], 200);
       
     }
 
@@ -355,14 +354,28 @@ class PacoteSalarialController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $pacote = PacoteSalarial::findOrFail($id);
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui        
+            $pacote = PacoteSalarial::findOrFail($id);
+            
+            // Deletar os registros atuais do funcionário para recriar os novos
+            SubsidioPacote::where('pacote_id', $pacote->id)->delete();
         
-        // Deletar os registros atuais do funcionário para recriar os novos
-        SubsidioPacote::where('pacote_id', $pacote->id)->delete();
-    
-        $pacote->delete();
+            $pacote->delete();
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
+        }
         
-        return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados Excluídos com sucesso!"], 200);
     
     }
 

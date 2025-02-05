@@ -50,13 +50,13 @@
 
                 <div class="col-12 col-md-12">
                     <form action="{{ route('funcionarios.update', $funcionario->id) }}" method="post" class="">
-                    
+
                         <div class="card">
                             @csrf
                             @method('put')
 
                             <div class="card-body row">
-                            
+
                                 <div class="col-12 col-md-3">
                                     <label for="numero_mecanografico" class="form-label">Número Mecanográfico:</label>
                                     <input type="text" class="form-control" id="numero_mecanografico" name="numero_mecanografico" value="{{ $funcionario->numero_mecanografico ?? old('numero_mecanografico') }}" placeholder="Informe número mecanográfico">
@@ -66,7 +66,6 @@
                                         @enderror
                                     </p>
                                 </div>
-        
 
                                 <div class="col-12 col-md-3">
                                     <label for="" class="form-label">Nome:</label>
@@ -255,15 +254,15 @@
 
                             </div>
                         </div>
-                        
-                          
+
+
                         <div class="card">
                             <div class="card-header">
                                 <h6>Documentos</h6>
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    
+
                                     <div class="col-12 col-md-3">
                                         <label for="numero_bilhete" class="form-label">Número do Bilhete de Identidade:</label>
                                         <input type="text" class="form-control" name="numero_bilhete" id="numero_bilhete" value="{{ $funcionario->numero_bilhete ?? old('numero_bilhete') }}" placeholder="Informe Número do Bilhete de Identidade">
@@ -273,7 +272,7 @@
                                             @enderror
                                         </p>
                                     </div>
-                                    
+
                                     <div class="col-12 col-md-3">
                                         <label for="local_emissao_bilhete" class="form-label">Local Emissão Bilhete:</label>
                                         <input type="text" class="form-control" name="local_emissao_bilhete" id="local_emissao_bilhete" value="{{ $funcionario->local_emissao_bilhete ?? old('local_emissao_bilhete') }}" placeholder="Informe local emissão bilhete">
@@ -283,31 +282,31 @@
                                             @enderror
                                         </p>
                                     </div>
-            
+
                                     <div class="col-12 col-md-3">
                                         <label for="data_emissao_bilhete" class="form-label">Data Emissão B.I <span class="text-secondary">(Opcional)</span>:</label>
-                                            <input type="date" class="form-control" name="data_emissao_bilhete" id="data_emissao_bilhete" value="{{ $funcionario->data_emissao_bilhete ?? old('data_emissao_bilhete') }}" placeholder="Data">
+                                        <input type="date" class="form-control" name="data_emissao_bilhete" id="data_emissao_bilhete" value="{{ $funcionario->data_emissao_bilhete ?? old('data_emissao_bilhete') }}" placeholder="Data">
                                         <p class="text-danger">
                                             @error('data_emissao_bilhete')
                                             {{ $message }}
                                             @enderror
                                         </p>
                                     </div>
-            
+
                                     <div class="col-12 col-md-3">
                                         <label for="validade_bilhete" class="form-label">Data Validade B.I <span class="text-secondary">(Opcional)</span>:</label>
-                                            <input type="date" class="form-control" id="validade_bilhete" name="validade_bilhete" value="{{ $funcionario->validade_bilhete ?? old('validade_bilhete') }}" placeholder="Validade">
+                                        <input type="date" class="form-control" id="validade_bilhete" name="validade_bilhete" value="{{ $funcionario->validade_bilhete ?? old('validade_bilhete') }}" placeholder="Validade">
                                         <p class="text-danger">
                                             @error('validade_bilhete')
                                             {{ $message }}
                                             @enderror
                                         </p>
                                     </div>
-            
+
                                 </div>
-                                
+
                                 <div class="row">
-                                    
+
                                     <div class="col-12 col-md-3">
                                         <label for="numero_passaporte" class="form-label">Número do Passaporte:</label>
                                         <input type="text" class="form-control" name="numero_passaporte" id="numero_passaporte" value="{{ $funcionario->numero_passaporte ?? old('numero_passaporte') }}" placeholder="Informe Número do Passaporte">
@@ -317,7 +316,7 @@
                                             @enderror
                                         </p>
                                     </div>
-                                    
+
                                     <div class="col-12 col-md-3">
                                         <label for="local_emissao_passaporte" class="form-label">Local Emissão Passaporte:</label>
                                         <input type="text" class="form-control" name="local_emissao_passaporte" id="local_emissao_passaporte" value="{{ $funcionario->local_emissao_passaporte ?? old('local_emissao_passaporte') }}" placeholder="Informe local emissão passaporte">
@@ -327,33 +326,30 @@
                                             @enderror
                                         </p>
                                     </div>
-            
+
                                     <div class="col-12 col-md-3">
                                         <label for="data_emissao_passaporte" class="form-label">Data Emissão Passaporte <span class="text-secondary">(Opcional)</span>:</label>
-                                            <input type="date" class="form-control" name="data_emissao_passaporte" id="data_emissao_passaporte" value="{{ $funcionario->data_emissao_passaporte ?? old('data_emissao_passaporte') }}" placeholder="Data">
+                                        <input type="date" class="form-control" name="data_emissao_passaporte" id="data_emissao_passaporte" value="{{ $funcionario->data_emissao_passaporte ?? old('data_emissao_passaporte') }}" placeholder="Data">
                                         <p class="text-danger">
                                             @error('data_emissao_passaporte')
                                             {{ $message }}
                                             @enderror
                                         </p>
                                     </div>
-            
+
                                     <div class="col-12 col-md-3">
                                         <label for="validade_passaporte" class="form-label">Data Validade Passaporte <span class="text-secondary">(Opcional)</span>:</label>
-                                            <input type="date" class="form-control" id="validade_passaporte" name="validade_passaporte" value="{{ $funcionario->validade_passaporte ?? old('validade_passaporte') }}" placeholder="Validade">
+                                        <input type="date" class="form-control" id="validade_passaporte" name="validade_passaporte" value="{{ $funcionario->validade_passaporte ?? old('validade_passaporte') }}" placeholder="Validade">
                                         <p class="text-danger">
                                             @error('validade_passaporte')
                                             {{ $message }}
                                             @enderror
                                         </p>
                                     </div>
-            
                                 </div>
-                                
                             </div>
                         </div>
-                        
-                        
+
                         <div class="card">
                             <div class="card-footer">
                                 @if (Auth::user()->can('editar funcionario'))
@@ -362,8 +358,8 @@
                                 <button type="reset" class="btn btn-danger">Cancelar</button>
                             </div>
                         </div>
-                        
-                        
+
+
                     </form>
                 </div>
             </div>
@@ -374,4 +370,59 @@
 </div>
 <!-- /.content-wrapper -->
 
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('form').on('submit', function(e) {
+            e.preventDefault(); // Impede o envio tradicional do formulário
+
+            let form = $(this);
+            let formData = form.serialize(); // Serializa os dados do formulário
+
+            $.ajax({
+                url: form.attr('action'), // URL do endpoint no backend
+                method: form.attr('method'), // Método HTTP definido no formulário
+                data: formData, // Dados do formulário
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                }
+                , beforeSend: function() {
+                    // Você pode adicionar um loader aqui, se necessário
+                    progressBeforeSend();
+                }
+                , success: function(response) {
+                    // Feche o alerta de carregamento
+                    Swal.close();
+                    // Exibe uma mensagem de sucesso
+                    showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                    window.location.reload();
+                }
+                , error: function(xhr) {
+                    // Feche o alerta de carregamento
+                    Swal.close();
+
+                    // Trata erros e exibe mensagens para o usuário
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        let messages = '';
+                        $.each(errors, function(key, value) {
+                            messages += `${value}\n *`; // Exibe os erros
+                        });
+
+                        showMessage('Erro de Validação!', messages, 'error');
+
+                    } else {
+
+                        showMessage('Erro!', xhr.responseJSON.message, 'error');
+
+                    }
+
+                }
+            , });
+        });
+    });
+
+</script>
 @endsection

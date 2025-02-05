@@ -68,15 +68,25 @@
             $totalDespesa = 0;
             $totalSaldo = 0;
         @endphp
-        @foreach ($operacoes as $item)
+        @foreach ($operacoes as $key => $item)
         <tr>
-            <td>{{ $item->id }}</td>
-            <td>{{ $item->nome }}</td>
-            <td>{{ $item->status }}</td>
+            <td>{{ $key + 1 }}</td>
+            <td>{{ $item->nome ?? "" }}</td>
+            <td>{{ $item->status  ?? ""}}</td>
             <td>{{ $item->type == "D" ? $item->dispesa->nome : $item->receita->nome }}</td>
             <td>{{ $item->type == "D" ? $item->fornecedor->nome : $item->cliente->nome }}</td>
             <td style="text-align: right">{{ $item->date_at }}</td>
-            <td>{{ $item->type == "D" ? $item->forma_pagamento->titulo : $item->forma_recebimento->titulo }}</td>
+          
+            @if ($item->formas == "C")
+                <td>{{ $item->caixa->conta ?? "" }} - {{ $item->caixa->nome ?? "" }}</td>
+            @else
+                @if ($item->formas == "B")
+                    <td>{{ $item->contabancaria->conta ?? "" }} - {{ $item->contabancaria->nome ?? "" }}</td>
+                @else
+                    <td>Outras</td>
+                @endif
+            @endif
+            
             @if ($item->type == "D")
                 @php
                     $totalDespesa += $item->motante;
@@ -91,12 +101,12 @@
         </tr>
         @endforeach
         <tr>
-            <td colspan="7" style="color: white;text-align: right;background-color: green"><strong>TOTAL RECEITAS</strong></td>
-            <td colspan="1" style="color: white;text-align: right;background-color: green"><strong>{{ number_format($totalReceita, 2, ',', '.') }}</strong></td>
+            <td colspan="7" style="color: white;text-align: right;background-color: rgba(15, 121, 15, 0.5)"><strong>TOTAL RECEITAS</strong></td>
+            <td colspan="1" style="color: white;text-align: right;background-color: rgba(15, 121, 15, 0.5)"><strong>{{ number_format($totalReceita, 2, ',', '.') }}</strong></td>
         </tr>
         <tr>
-            <td colspan="7" style="color: white;text-align: right;background-color: red"><strong>TOTAL DESPESAS</strong></td>
-            <td colspan="1" style="color: white;text-align: right;background-color: red"><strong>{{ number_format($totalDespesa, 2, ',', '.') }}</strong></td>
+            <td colspan="7" style="color: white;text-align: right;background-color: rgba(214, 49, 19, 0.5)"><strong>TOTAL DESPESAS</strong></td>
+            <td colspan="1" style="color: white;text-align: right;background-color: rgba(214, 49, 19, 0.5)"><strong>{{ number_format($totalDespesa, 2, ',', '.') }}</strong></td>
         </tr>
         @php $totalSaldo = $totalReceita - $totalDespesa ; @endphp
         <tr>

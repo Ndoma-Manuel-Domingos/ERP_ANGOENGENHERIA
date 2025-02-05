@@ -297,7 +297,6 @@ class CaixaController extends Controller
             }
                        
             
-            
             $caixa->nome = $request->nome;
             $caixa->conta = $nova_conta;
             $caixa->code = $code;

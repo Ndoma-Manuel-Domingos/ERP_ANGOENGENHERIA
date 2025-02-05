@@ -43,6 +43,8 @@
                                         <input type="text" placeholder="Informe o montante disponível ao fechar o caixa" class="form-control form-control-lg @error('valor') is-invalid @enderror" value="{{ old('valor') ?? $saldo }}" name="valor">
                                     </div>
                                 </div>
+                                
+                                <input type="hidden" name="caixa_id" value={{ $caixaActivo->id }}>
 
                                 <div class="input-group mt-3">
                                     <span class="input-group-append text-center">
@@ -161,7 +163,7 @@
                     // Feche o alerta de carregamento
                     Swal.close();
 
-                    showMessage('Sucesso!', 'Seja bem vindo ao sistema!', 'success');
+                    showMessage('Sucesso!', 'Caixa fechado com sucesso!', 'success');
 
                     window.location.href = response.redirect;
 
