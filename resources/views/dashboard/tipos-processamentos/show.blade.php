@@ -96,8 +96,6 @@
 
 @endsection
 
-
-
 @section('scripts')
 <script>
     $(document).on('click', '.delete-record', function(e) {

@@ -34,6 +34,8 @@ class Processamento extends Model
         'valor_iliquido',
         'valor_liquido',
         'faltas',
+        'material_colectavel',
+        'salario_horario',
         'outros_descontos',
         'categoria',
         'dias_processados',

@@ -410,7 +410,6 @@
                         showMessage('Erro!', xhr.responseJSON.message, 'error');
 
                     }
-
                 }
             , });
         });

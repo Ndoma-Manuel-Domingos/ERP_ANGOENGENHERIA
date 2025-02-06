@@ -37,9 +37,10 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
+                                        <th>Escalão</th>
+                                        <th>Abatimentos</th>
                                         <th>Remunerações</th>
                                         <th>Taxas</th>
-                                        <th>Abatimentos</th>
                                         <th>Valor Fixo</th>
                                     </tr>
                                 </thead>
@@ -47,9 +48,10 @@
                                     @foreach ($taxas as $item)
                                     <tr>
                                         <td>{{ $item->id }}</td>
+                                        <td>{{ $item->escalao }}</td>
+                                        <td>{{ number_format($item->abatimento ?? 0, 1, ',', '.' ) }}</td>
                                         <td>{{ number_format($item->remuneracao ?? 0, 1, ',', '.' ) }}</td>
                                         <td>{{ number_format($item->taxa ?? 0, 1, ',', '.' ) }}</td>
-                                        <td>{{ number_format($item->abatimento ?? 0, 1, ',', '.' ) }}</td>
                                         <td>{{ number_format($item->valor_fixo ?? 0, 1, ',', '.' ) }}</td>
                                     </tr>
                                     @endforeach

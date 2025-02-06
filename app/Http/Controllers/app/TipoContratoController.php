@@ -7,6 +7,7 @@ use App\Models\TipoContrato;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 
 class TipoContratoController extends Controller
@@ -88,20 +89,35 @@ class TipoContratoController extends Controller
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
 
-        $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
-        $tipo_contrato = TipoContrato::create([
-            'entidade_id' => $entidade->empresa->id, 
-            'nome' => $request->nome,
-            'status' => $request->status,
-            'user_id' => Auth::user()->id,
-        ]);
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui        
+      
+            
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+            
+            $tipo_contrato = TipoContrato::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => $request->nome,
+                'status' => $request->status,
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        if($tipo_contrato->save()){
-            return redirect()->route('tipos-contratos.index')->with("success", "Dados Cadastrar com Sucesso!");
-        }else{
-            return redirect()->route('tipos-contratos.create')->with("warning", "Erro ao tentar cadastrar tipo contrato");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+
+
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);
+
     }
 
     
@@ -182,15 +198,30 @@ class TipoContratoController extends Controller
         ],[
             'nome.required' => 'O nome é um campo obrigatório',
         ]);
+        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui        
+            
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+            
+            $tipo_contrato = TipoContrato::findOrFail($id);
+            $tipo_contrato->update($request->all());
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
 
-        $tipo_contrato = TipoContrato::findOrFail($id);
-        $tipo_contrato->update($request->all());
-
-        if($tipo_contrato->update()){
-            return redirect()->route('tipos-contratos.index')->with("success", "Dados Actualizados com Sucesso!");
-        }else{
-            return redirect()->route('tipos-contratos.edit')->with("warning", "Erro ao tentar Actualizar Tipo Contrato");
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+
+
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);
+
     }
 
         /**
@@ -207,13 +238,28 @@ class TipoContratoController extends Controller
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
+            
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui                    
+            $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
+            
+            $tipo_contrato = TipoContrato::findOrFail($id);
+            $tipo_contrato->delete();
         
-        $tipo_contrato = TipoContrato::findOrFail($id);
-        if($tipo_contrato->delete()){
-            return redirect()->route('tipos-contratos.index')->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->route('tipos-contratos.index')->with("warning", "Erro ao tentar Excluir Tipo Contrato");
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+
+        return response()->json(['success' => true, 'message' => "Dados excluídos com sucesso!"], 200);
+
     }
 
 }

@@ -4,7 +4,10 @@ namespace App\Http\Controllers\app;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\TraitHelpers;
+use App\Models\Caixa;
+use App\Models\ContaBancaria;
 use App\Models\Contrato;
+use App\Models\Dispesa;
 use App\Models\Exercicio;
 use App\Models\Funcionario;
 use App\Models\MarcacaoFalta;
@@ -12,6 +15,7 @@ use App\Models\MarcacaoFeria;
 use App\Models\Periodo;
 use App\Models\Processamento;
 use App\Models\TaxaIRT;
+use App\Models\TipoPagamento;
 use App\Models\TipoProcessamento;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -248,13 +252,14 @@ class ProcessamentoController extends Controller
             // Realizar operações de banco de dados aqui
             
             $tipo_processamento = TipoProcessamento::findOrFail($request->processamento_id); 
-              
+
             $periodo = Periodo::findOrFail($request->periodo_id);
             
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
-            
+                        
             // Data atual
             $dataAtual = Carbon::now()->format('Y-m-d');
+            
             
             if($tipo_processamento->sigla == "V"){
                 // Consultar contratos que estão ativos e cujo data_final é menor ou igual à data atual
@@ -265,11 +270,11 @@ class ProcessamentoController extends Controller
                     // ->whereDate('data_final', '>=', $dataAtual)
                     // ->whereRaw('DATE_ADD(data_inicio, INTERVAL 22 DAY) <= ?', [$dataAtual])
                     ->pluck('funcionario_id');
-                    
+                                
                 if ($contratos->isEmpty()) {
                     return redirect()->back()->with("warning", "Nenhum contrato valido encontrado, verifica a data do fim de contrato dos funcionários");
-                }                  
-           
+                }   
+              
                 $funcionarios = Funcionario::with(['contrato.subsidios_contrato.subsidio'])
                 ->with(['contrato.subsidios_contrato' => function($query) use ($request){
                     $query->where('processamento_id', $request->processamento_id);
@@ -286,9 +291,9 @@ class ProcessamentoController extends Controller
                 ->whereIn('id', $contratos)
                 ->orderBy('created_at', 'desc')
                 ->get();
-          
-                foreach ($funcionarios as $funcionario) {
                 
+                foreach ($funcionarios as $funcionario) {
+                    
                     $salario_iliquido = 0;
                     $salario_base = 0;
                     $total_subsidios = 0;
@@ -314,16 +319,22 @@ class ProcessamentoController extends Controller
                     // Salario base do funcionario
                     $salario_base = $funcionario->contrato->salario_base ?? 0;
                     
-                   
                     foreach ($funcionario->contrato->subsidios_contrato as $subsidio) {
-                      
+                        
                         if($subsidio->irt == 'Y'){
                         
                             // $total_valor_desconto_faltas = ($subsidio->salario * $numero_faltas) / $request->dias_processados;
                             // - $total_valor_desconto_faltas
                             
                             if($subsidio->salario > $subsidio->limite_isencao){
-                                $soma_subsidios_irt += ($subsidio->salario - $subsidio->limite_isencao);
+                                
+                                $result_ = $subsidio->salario - $subsidio->limite_isencao;
+                                
+                                if($result_ <= -1){
+                                    $result_ = $result_ * (-1);
+                                }
+                                
+                                $soma_subsidios_irt += $result_;
                             }
                         }
                         // if($subsidio->inss == 'Y'){
@@ -334,7 +345,9 @@ class ProcessamentoController extends Controller
                         
                     }
                     
+                    
                     foreach ($funcionario->contrato->descontos_contrato as $desconto) {
+                    
                         if($desconto->tipo == "O"){
                             
                             if($desconto->tipo_valor == 'P'){
@@ -350,12 +363,17 @@ class ProcessamentoController extends Controller
                     
                     $salario_iliquido = $salario_base + $total_subsidios;
                     
+                    
                     $inss = $salario_iliquido * (3 / 100);
                     $inss_empresa = $salario_iliquido * (8 / 100);
                     
                     $materia_coletavel = ($salario_base + $soma_subsidios_irt) - $inss;
                     
-                    $tabela = TaxaIRT::where('remuneracao', '>=', $materia_coletavel)->where('abatimento', '<=', $materia_coletavel)->where('exercicio_id', $this->exercicio())->first();
+                    
+                    $tabela = TaxaIRT::where('remuneracao', '>=', $materia_coletavel)
+                        ->where('abatimento', '<=', $materia_coletavel)
+                        ->where('exercicio_id', $this->exercicio())
+                        ->first();
                     
                     if($tabela){
                         $ramanescente =  $materia_coletavel - $tabela->excesso;
@@ -371,7 +389,7 @@ class ProcessamentoController extends Controller
                     $total_faltas = ($salario_base * $numero_faltas) / $request->dias_processados;
                     
                     $desconto = $irt + $inss + $total_faltas + $total_outros_descontos;
-                    
+                       
                     $salario_liquido = $salario_iliquido - $desconto;
                     
                     $verificar_processamento = Processamento::where('funcionario_id', $funcionario->id)
@@ -381,7 +399,7 @@ class ProcessamentoController extends Controller
                         ->where('entidade_id', $entidade->empresa->id)
                         ->whereIn('status', ['Pendente'])
                         ->first();
-                    
+                        
                     if(!$verificar_processamento){
                         Processamento::create([
                             'data_registro' => date("Y-m-d"),
@@ -389,6 +407,7 @@ class ProcessamentoController extends Controller
                             'exercicio_id' => $request->exercicio_id,
                             'periodo_id' => $request->periodo_id,
                             'outros_descontos' => $total_outros_descontos,
+                            'material_colectavel' => $materia_coletavel,
                             'irt' => $irt,
                             'inss' => $inss,
                             'inss_empresa' => $inss_empresa,
@@ -413,6 +432,7 @@ class ProcessamentoController extends Controller
                             'entidade_id' => $entidade->empresa->id,
                         ]);
                     }
+                    
                 }
             }
             
@@ -486,6 +506,7 @@ class ProcessamentoController extends Controller
                                         'exercicio_id' => $request->exercicio_id,
                                         'periodo_id' => $request->periodo_id,
                                         'outros_descontos' => $total_outros_descontos,
+                                        'material_colectavel' => $materia_coletavel,
                                         'irt' => $irt,
                                         'inss' => $inss,
                                         'inss_empresa' => $inss_empresa,
@@ -586,6 +607,7 @@ class ProcessamentoController extends Controller
                                     'exercicio_id' => $request->exercicio_id,
                                     'periodo_id' => $request->periodo_id,
                                     'total_subsidios' => $total_outros_descontos,
+                                    'material_colectavel' => $materia_coletavel,
                                     'irt' => $irt,
                                     'inss' => $inss,
                                     'inss_empresa' => $inss_empresa,
@@ -663,6 +685,12 @@ class ProcessamentoController extends Controller
         $periodos = Periodo::where('entidade_id', $entidade->empresa->id)
             ->where('exercicio_id', $this->exercicio())
             ->get();
+            
+            
+        $caixas = Caixa::where('entidade_id', $entidade->empresa->id)->get();
+        $bancos = ContaBancaria::where('entidade_id', $entidade->empresa->id)->get();
+        
+        $dispesas = Dispesa::where('entidade_id', $entidade->empresa->id)->where('type', 'D')->get();
 
         $head = [
             "titulo" => "Pagamento de Processamentos",
@@ -671,6 +699,10 @@ class ProcessamentoController extends Controller
             "processamentos" => $processamentos,
             "periodos" => $periodos,
             "exercicios" => $exercicios,
+            "caixas" => $caixas,
+            "bancos" => $bancos,
+            "dispesas" => $dispesas,
+            "forma_pagmento" => TipoPagamento::get(),
             "tipo_entidade_logado" => User::with(['empresa.tipo_entidade.modulos'])->findOrFail(Auth::user()->id),
         ];
 
@@ -709,25 +741,94 @@ class ProcessamentoController extends Controller
             'dias_processados.required' => 'Dias de processamento é um campo obrigatório',
         ]);
         
+        $forma = TipoPagamento::where('tipo', $request->forma_de_pagamento)->first();
+       
+        $dispesa = Dispesa::findOrFail($request->dispesa_id);
+        
+        if($forma->tipo === "NU"){
+            $request->validate([
+                'caixa_id' => 'required|string',
+            ],[
+                'caixa_id.required' => 'O caixa é um campo obrigatório',
+            ]);
+            
+            $subconta = Caixa::findOrFail($request->caixa_id);
+            $formas = "C";
+        }
+        
+        if($forma->tipo === "MB" || $forma->tipo === "DE" || $forma->tipo === "TE"){
+            $request->validate([
+                'banco_id' => 'required|string',
+            ],[
+                'banco_id.required' => 'A conta bancária é um campo obrigatório',
+            ]);
+            
+            $subconta = ContaBancaria::findOrFail($request->banco_id);
+            $formas = "B";
+        }
+        
+        if($forma->tipo === "OU"){
+            $request->validate([
+                'caixa_id' => 'required|string',
+                'banco_id' => 'required|string',
+            ],[
+                'caixa_id.required' => 'O caixa é um campo obrigatório',
+                'banco_id.required' => 'A conta bancária é um campo obrigatório',
+            ]);
+            $formas = "O";
+            $caixa = Caixa::findOrFail($request->caixa_id);
+            $conta_bancaria = ContaBancaria::findOrFail($request->banco_id);
+        }
+     
         try {
             DB::beginTransaction();
             // Realizar operações de banco de dados aqui
             
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
             
+            $code = uniqid(time());
+            $data_at = date("Y-m-d");
+
             $processamentos = Processamento::where('exercicio_id', $request->exercicio_id)
                 ->where('periodo_id', $request->periodo_id)
                 ->where('processamento_id', $request->processamento_id)
                 ->where('entidade_id', $entidade->empresa->id)
                 ->whereIn('status', ['Pendente'])
                 ->get();
+                
+            $caixaActivo = Caixa::where([
+                ['active', true],
+                ['status', '=', 'aberto'],
+                ['user_id', '=', Auth::user()->id],
+                ['entidade_id', '=', $entidade->empresa->id], 
+            ])->first();
             
             if($processamentos){
+                $valor_total = 0;
                 foreach ($processamentos as $processamento) {
                     $update = Processamento::findOrFail($processamento->id);
+                    $valor_total += ($processamento->irt + $processamento->inss + $processamento->inss_empresa + $processamento->valor_liquido);
                     $update->status = 'Pago';
                     $update->update();
                 }
+                
+                $this->registra_operacoes(  
+                    $valor_total,
+                    $subconta->id,
+                    NULL,
+                    "D",
+                    'pago',
+                    $code,
+                    "S",
+                    $data_at,
+                    $entidade->empresa->id,
+                    $dispesa->nome ?? "Pagamento de salário",
+                    Auth::user()->id,
+                    $caixaActivo ? 'pendente' : 'concluido', 
+                    $formas, 
+                    $caixaActivo ? $caixaActivo->code_caixa : NULL,
+                    $dispesa->id
+                );
             }
                    
             if(count($processamentos) == 0){

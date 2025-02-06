@@ -102,13 +102,9 @@
                             @endif
                             <div class="dropdown-divider"></div>
                             @if (Auth::user()->can('eliminar tipo contrato'))
-                            <form action="{{ route('tipos-contratos.destroy', $item->id ) }}" method="post">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger dropdown-item" onclick="return confirm('Tens Certeza que Desejas excluir esta tipo contrato?')">
-                                    <i class="fas fa-trash text-danger"></i> Eliminar
-                                </button>
-                            </form>
+                            <button class="btn btn-sm btn-danger dropdown-item delete-record" data-id="{{ $item->id }}">
+                              <i class="fas fa-trash text-danger"></i> Eliminar
+                            </button>
                             @endif
                           </div>
                     </td>
@@ -138,6 +134,50 @@
 
 @section('scripts')
   <script>
+  
+  $(document).on('click', '.delete-record', function(e) {
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
+
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, excluir!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('tipos-contratos.destroy', ':id') }}`.replace(':id', recordId)
+                    , method: 'DELETE'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
+    });
+
+  
     $(function() {
       $("#carregar_tabela").DataTable({
         language: {

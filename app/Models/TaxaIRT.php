@@ -24,6 +24,8 @@ class TaxaIRT extends Model
         'abatimento',
         'valor_fixo',
         'excesso',
+        'entidade_id',
+        'exercicio_id',
     ];
 
 }

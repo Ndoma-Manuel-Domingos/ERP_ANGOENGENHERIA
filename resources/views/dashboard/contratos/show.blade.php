@@ -120,25 +120,25 @@
                                                 <td class="text-left">{{ number_format($contrato->subsidio_natal ?? 0, 1, ',', '.' ) }} % => {{ number_format(($contrato->salario_base * ($contrato->subsidio_natal / 100)) ?? 0, 2, ',', '.' ) ?? '-------------' }} AOA</td>
                                                 <td class="text-left">{{ number_format($contrato->subsidio_ferias ?? 0, 1, ',', '.' ) }} % => {{ number_format(($contrato->salario_base * ($contrato->subsidio_ferias / 100)) ?? 0, 2, ',', '.' ) ?? '-------------' }} AOA</td>
                                             </tr>
-                                            
+
                                             <tr>
                                                 <th class="text-left" colspan="2">Mês Pagamento & Forma Pagamento</th>
                                             </tr>
-                                            
+
                                             <tr>
                                                 <td class="text-left">{{ $contrato->descricao_mes($contrato->mes_pagamento_natal) }} - {{ $contrato->forma_pagamento_subcidio($contrato->forma_pagamento_natal) }}</td>
                                                 <td class="text-left">{{ $contrato->descricao_mes($contrato->mes_pagamento_ferias) }} - {{ $contrato->forma_pagamento_subcidio($contrato->forma_pagamento_ferias) }}</td>
                                             </tr>
-                                            
+
                                             <tr>
                                                 <th>Dias Processamentos:</th>
                                                 <td class="text-right">{{ $contrato->dias_processamentos($contrato->dias_processamento) }}</td>
                                             </tr>
-                                            
+
                                         </tbody>
                                     </table>
                                 </div>
-                                
+
                                 <div class="col-12 col-md-12">
                                     <table class="table text-nowrap">
                                         <tbody>
@@ -151,18 +151,18 @@
                                                 <th class="text-right"> VALOR</th>
                                             </tr>
                                             @foreach ($contrato->subsidios_contrato as $item)
-                                                <tr>
-                                                    <th>{{ $item->subsidio->nome ?? "" }}</th>
-                                                    <th class="text-right">{{ $item->inss == "Y" ? "SIM" : "NÃO" }}</th>
-                                                    <th class="text-right">{{ $item->irt == "Y" ? "SIM" : "NÃO" }}</th>
-                                                    <th class="text-right">{{ $item->processamento->nome ?? "" }}</th>
-                                                    <td class="text-right">{{ number_format($item->limite_isencao ?? 0, 1, ',', '.' ) ?? 0 }} - AOA</td>
-                                                    <td class="text-right">{{ number_format($item->salario ?? 0, 1, ',', '.' ) ?? 0 }} - AOA</td>
-                                                </tr>
+                                            <tr>
+                                                <th>{{ $item->subsidio->nome ?? "" }}</th>
+                                                <th class="text-right">{{ $item->inss == "Y" ? "SIM" : "NÃO" }}</th>
+                                                <th class="text-right">{{ $item->irt == "Y" ? "SIM" : "NÃO" }}</th>
+                                                <th class="text-right">{{ $item->processamento->nome ?? "" }}</th>
+                                                <td class="text-right">{{ number_format($item->limite_isencao ?? 0, 1, ',', '.' ) ?? 0 }} - AOA</td>
+                                                <td class="text-right">{{ number_format($item->salario ?? 0, 1, ',', '.' ) ?? 0 }} - AOA</td>
+                                            </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
-                                    
+
                                     <table class="table text-nowrap">
                                         <tbody>
                                             <tr>
@@ -173,13 +173,13 @@
                                                 <th class="text-right"> VALOR</th>
                                             </tr>
                                             @foreach ($contrato->descontos_contrato as $item)
-                                                <tr>
-                                                    <th>{{ $item->desconto->nome ?? "" }}</th>
-                                                    <th class="text-right">{{ $item->inss == "Y" ? "SIM" : "NÃO" }}</th>
-                                                    <th class="text-right">{{ $item->irt == "Y" ? "SIM" : "NÃO" }}</th>
-                                                    <th class="text-right">{{ $item->processamento->nome ?? "" }}</th>
-                                                    <td class="text-right">{{ number_format($item->salario ?? 0, 1, ',', '.' ) ?? 0 }}{{ $item->tipo_valor == "P" ? '%' : " - AOA" }}</td>
-                                                </tr>
+                                            <tr>
+                                                <th>{{ $item->desconto->nome ?? "" }}</th>
+                                                <th class="text-right">{{ $item->inss == "Y" ? "SIM" : "NÃO" }}</th>
+                                                <th class="text-right">{{ $item->irt == "Y" ? "SIM" : "NÃO" }}</th>
+                                                <th class="text-right">{{ $item->processamento->nome ?? "" }}</th>
+                                                <td class="text-right">{{ number_format($item->salario ?? 0, 1, ',', '.' ) ?? 0 }}{{ $item->tipo_valor == "P" ? '%' : " - AOA" }}</td>
+                                            </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
@@ -189,7 +189,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-12 col-12">
                     <div class="card">
                         <div class="card-header">
@@ -197,7 +197,7 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                              
+
                                 <div class="col-12 col-md-4">
                                     <table class="table text-nowrap">
                                         <tbody>

@@ -9,12 +9,12 @@
         <div class="container-fluid">
             <div class="row mb-2">
                 <div class="col-sm-6">
-                    <h1 class="m-0">Cadastrar Exercício</h1>
+                    <h1 class="m-0">{{ $titulo }}</h1>
                 </div><!-- /.col -->
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{{ route('exercicios.index') }}">Voltar</a></li>
-                        <li class="breadcrumb-item active">Exercício</li>
+                        <li class="breadcrumb-item"><a href="{{ route('categorias-cargos.index') }}">Voltar</a></li>
+                        <li class="breadcrumb-item active">{{ $descricao }}</li>
                     </ol>
                 </div><!-- /.col -->
             </div><!-- /.row -->
@@ -47,56 +47,40 @@
                 </div>
                 <div class="col-12 col-md-12">
                     <div class="card">
-                        <form action="{{ route('exercicios.store') }}" method="post" class="">
+                        <form action="{{ route('configuracao-rh.store') }}" method="post" class="">
                             @csrf
                             <div class="card-body row">
 
                                 <div class="col-12 col-md-3">
-                                    <label for="nome" class="form-label">Designação</label>
+                                    <label for="horas_diarias" class="form-label">Hora diárias</label>
                                     <div class="input-group mb-3">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                        </div>
-                                        <input type="text" class="form-control  @error('nome') is-invalid @enderror" name="nome" id="nome" value="{{ old('nome') }}" placeholder="Informe a exercicio">
+                                        <input type="text" class="form-control" name="horas_diarias" id="horas_diarias" value="{{ $configuracao->horas_diarias ?? old('horas_diarias') }}" placeholder="Informe a hora diárias">
                                     </div>
+                                    <p class="text-danger">
+                                        @error('horas_diarias')
+                                        {{ $message }}
+                                        @enderror
+                                    </p>
                                 </div>
 
                                 <div class="col-12 col-md-3">
-                                    <label for="inicio" class="form-label">Data Início</label>
+                                    <label for="horas_semanais" class="form-label">Horas Semanais</label>
                                     <div class="input-group mb-3">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                        </div>
-                                        <input type="date" class="form-control @error('inicio') is-invalid @enderror" name="inicio" id="inicio" value="{{ old('inicio') }}" placeholder="Informe a data inicio">
+                                        <input type="text" class="form-control" name="horas_semanais" id="horas_semanais" value="{{ $configuracao->horas_semanais ?? old('horas_semanais') }}" placeholder="Informe a horas semanais">
                                     </div>
+                                    <p class="text-danger">
+                                        @error('horas_semanais')
+                                        {{ $message }}
+                                        @enderror
+                                    </p>
                                 </div>
+                                
+                                <input type="hidden" name="configuracao_id" value="{{ $configuracao->id ?? "" }}">
 
-                                <div class="col-12 col-md-3">
-                                    <label for="final" class="form-label">Data Final</label>
-                                    <div class="input-group mb-3">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                        </div>
-                                        <input type="date" class="form-control @error('final') is-invalid @enderror" name="final" id="final" value="{{ old('final') }}" placeholder="Informe a data final">
-                                    </div>
-                                </div>
-
-                                <div class="col-12 col-md-3">
-                                    <label for="status" class="form-label">Estado</label>
-                                    <div class="input-group mb-3">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                        </div>
-                                        <select type="text" class="form-control @error('status') is-invalid @enderror" id="status" name="status">
-                                            <option value="activo">Activo</option>
-                                            <option value="desactivo">Desactivo</option>
-                                        </select>
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="card-footer">
-                                @if (Auth::user()->can('criar exercicio'))
+                                @if (Auth::user()->can('criar categoria'))
                                 <button type="submit" class="btn btn-primary">Salvar</button>
                                 @endif
                                 <button type="reset" class="btn btn-danger">Cancelar</button>

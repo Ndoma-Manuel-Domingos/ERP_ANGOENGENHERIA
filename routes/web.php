@@ -67,6 +67,7 @@ use App\Http\Controllers\app\AndarController;
 use App\Http\Controllers\app\AnuncioAdminController;
 use App\Http\Controllers\app\AnuncioController;
 use App\Http\Controllers\app\ClasseController;
+use App\Http\Controllers\app\ConfiguracaoHRController;
 use App\Http\Controllers\app\ContrapartidaController;
 use App\Http\Controllers\app\DispesaController;
 use App\Http\Controllers\app\EquipamentoActivoController;
@@ -535,6 +536,8 @@ Route::get('/', [AppController::class, 'login'])->name('login_');
           
             Route::get('/dashboard-recurso-humanos', [HomeController::class, 'dashboardRecursoHumano'])->name('dashboard-recurso-humanos');
             Route::get('/configuracao-recurso-humanos', [HomeController::class, 'configuracaoRecursoHumano'])->name('configuracao-recurso-humanos');
+            
+            Route::resource('/configuracao-rh', ConfiguracaoHRController::class);
                 
             Route::resource('/categorias-cargos', CategoriaCargoController::class);
             Route::resource('/tipos-rendimentos', TipoRendimentoController::class);

@@ -113,7 +113,8 @@ class TipoRendimentoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+         
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);
       
     }
 
@@ -215,7 +216,8 @@ class TipoRendimentoController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
 
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+          
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);
 
     }
 
@@ -250,7 +252,8 @@ class TipoRendimentoController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-        return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
+         
+        return response()->json(['success' => true, 'message' => "Dados excluídos com sucesso!"], 200);
 
     }
 

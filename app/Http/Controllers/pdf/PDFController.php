@@ -5,6 +5,7 @@ namespace App\Http\Controllers\pdf;
 use App\Http\Controllers\Controller;
 use App\Models\Caixa;
 use App\Models\Cliente;
+use App\Models\Desconto;
 use App\Models\Entidade;
 use App\Models\Exercicio;
 use App\Models\Itens_venda;
@@ -15,6 +16,7 @@ use App\Models\Produto;
 use App\Models\Quarto;
 use App\Models\Registro;
 use App\Models\Reserva;
+use App\Models\Subsidio;
 use App\Models\TipoProcessamento;
 use App\Models\User;
 use App\Models\Venda;
@@ -33,7 +35,18 @@ class PDFController extends Controller
     {
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
 
-        $processamentos_orgacao_social = Processamento::with(['exercicio', 'periodo', 'funcionario.contrato.categoria', 'funcionario.contrato.cargo', 'processamento', 'user'])
+        $processamentos_orgacao_social = Processamento::with(
+            [
+                'exercicio', 
+                'periodo', 
+                'funcionario.contrato.subsidios_contrato',
+                'funcionario.contrato.descontos_contrato',
+                'funcionario.contrato.categoria', 
+                'funcionario.contrato.cargo', 
+                'processamento', 
+                'user'
+            ]
+        )
         ->when($request->processamento_id, function($query, $value){
             $query->where('processamento_id', $value);
         })
@@ -76,7 +89,7 @@ class PDFController extends Controller
         // ->when($request->data_final, function($query, $value){
         //     $query->whereDate('data_registro', '<=', $value);
         // })
-        ->where('categoria', "Pessoal")
+        ->whereIn('categoria', ["Pessoal", "Empregados"])
         ->where('entidade_id', $entidade->empresa->id)
         ->orderBy('created_at', 'desc')
         ->get();
@@ -109,7 +122,10 @@ class PDFController extends Controller
         $exercicio = Exercicio::find($request->exercicio_id);
 
         $periodo = Periodo::find($request->periodo_id);
-
+        
+        $subsidios = Subsidio::where('status', 'activo')->where('entidade_id',  $entidade->empresa->id)->get();
+        $descontos = Desconto::where('status', 'activo')->where('entidade_id',  $entidade->empresa->id)->get();
+        
         $empresa = Entidade::with("variacoes")->with("categorias")->with("marcas")->findOrFail($entidade->empresa->id);
         
         $head = [
@@ -123,6 +139,9 @@ class PDFController extends Controller
             "tipo_processamento" => $tipo_processamento,
             "periodo" => $periodo,
             "exercicio" => $exercicio,
+            
+            "subsidios" => $subsidios,
+            "descontos" => $descontos,
             
             "lojas" => Loja::where('entidade_id', $entidade->empresa->id)->get(),
             "requests" => $request->all('data_inicio', 'data_final', 'funcionario_id', 'processamento_id', 'exercicio_id', 'periodo_id', 'status'),

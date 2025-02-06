@@ -551,6 +551,56 @@
 
 @section('scripts')
 <script>
+    
+    $(document).ready(function() {
+        $('form').on('submit', function(e) {
+            e.preventDefault(); // Impede o envio tradicional do formulário
+
+            let form = $(this);
+            let formData = form.serialize(); // Serializa os dados do formulário
+
+            $.ajax({
+                url: form.attr('action'), // URL do endpoint no backend
+                method: form.attr('method'), // Método HTTP definido no formulário
+                data: formData, // Dados do formulário
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                }
+                , beforeSend: function() {
+                    // Você pode adicionar um loader aqui, se necessário
+                    progressBeforeSend();
+                }
+                , success: function(response) {
+                    // Feche o alerta de carregamento
+                    Swal.close();
+                    // Exibe uma mensagem de sucesso
+                    showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                    window.location.reload();
+                }
+                , error: function(xhr) {
+                    // Feche o alerta de carregamento
+                    Swal.close();
+
+                    // Trata erros e exibe mensagens para o usuário
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        let messages = '';
+                        $.each(errors, function(key, value) {
+                            messages += `${value}\n *`; // Exibe os erros
+                        });
+
+                        showMessage('Erro de Validação!', messages, 'error');
+
+                    } else {
+
+                        showMessage('Erro!', xhr.responseJSON.message, 'error');
+
+                    }
+
+                }
+            , });
+        });
+    });
 
     window.onload = function() {
         // Obter a data e hora atual
@@ -568,16 +618,6 @@
         document.getElementById('hora_entrada').value = horaAtual;
         document.getElementById('hora_saida').value = horaAtual;
     };
-
-
-    // $("#cargo_id").change(() => {
-    //     let id = $("#cargo_id").val();
-    //     $.get('../carregar-categorias-cargo/' + id, function(data) {
-    //         $("#categoria_id").html("")
-    //         $("#categoria_id").html(data)
-    //     })
-    // })
-
     
   // BS-Stepper Init
     document.addEventListener('DOMContentLoaded', function () {

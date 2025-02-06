@@ -246,13 +246,9 @@ class ContratoController extends Controller
                         'entidade_id' => $entidade->empresa->id,
                     ]);
                 }
-            
-          
             }else {
-
                 return redirect()->back()->with("warning", "Este Funcionário Já tem um contrato assinado!");
             }
-            
 
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
             DB::commit();
@@ -266,7 +262,8 @@ class ContratoController extends Controller
         }
 
 
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+      
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);
     
     }
 
@@ -477,8 +474,8 @@ class ContratoController extends Controller
         }
 
         $contrato->update();
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
-        
+      
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);    
     }
 
         /**
@@ -496,12 +493,25 @@ class ContratoController extends Controller
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
         }
         
-        $contrato = Contrato::findOrFail($id);
-        if($contrato->delete()){
-            return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-        }else{
-            return redirect()->back()->with("warning", "Erro ao tentar Excluir Contrato");
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui     
+            $contrato = Contrato::findOrFail($id);
+            $contrato->delete();
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
+        
+      
+        return response()->json(['success' => true, 'message' => "Dados Excluído com sucesso!"], 200); 
+        
     }
 
 }

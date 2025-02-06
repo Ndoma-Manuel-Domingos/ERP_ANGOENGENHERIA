@@ -71,7 +71,9 @@ class Funcionario extends Model
     
     public function contrato()
     {
-        return $this->hasOne(Contrato::class, 'funcionario_id', 'id');
+        $user = auth()->user();
+        
+        return $this->hasOne(Contrato::class, 'funcionario_id', 'id')->where('entidade_id', $user->entidade_id);
     }
         
     public function seguradora()

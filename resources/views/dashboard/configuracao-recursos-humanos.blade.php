@@ -25,7 +25,47 @@
     <!-- Main content -->
     <div class="content">
         <div class="container-fluid">
-
+            <div class="row">
+                      
+                <div class="col-lg-3 col-md-3 col-12">
+                    <div class="small-box bg-light">
+                        <div class="inner">
+                            <h3>.</h3>
+                            <p class="text-uppercase">Exercícios</p>
+                        </div>
+                        <div class="icon">
+                            <i class="ion ion-pie-graph"></i>
+                        </div>
+                        <a href="{{ route('exercicios.index') }}" class="small-box-footer">Mais informação <i class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+            
+                <div class="col-lg-3 col-md-3 col-12">
+                    <div class="small-box bg-light">
+                        <div class="inner">
+                            <h3>.</h3>
+                            <p class="text-uppercase">Períodos</p>
+                        </div>
+                        <div class="icon">
+                            <i class="ion ion-pie-graph"></i>
+                        </div>
+                        <a href="{{ route('periodos.index') }}" class="small-box-footer">Mais informação <i class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+            
+                <div class="col-lg-3 col-md-3 col-12">
+                    <div class="small-box bg-light">
+                        <div class="inner">
+                            <h3>.</h3>
+                            <p class="text-uppercase">Configurações Basicas</p>
+                        </div>
+                        <div class="icon">
+                            <i class="ion ion-pie-graph"></i>
+                        </div>
+                        <a href="{{ route('configuracao-rh.create') }}" class="small-box-footer">Mais informação <i class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+            </div>
         </div><!-- /.container-fluid -->
     </div>
     <!-- /.content -->

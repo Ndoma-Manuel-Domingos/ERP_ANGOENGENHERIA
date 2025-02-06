@@ -20,7 +20,6 @@ class ExercicioController extends Controller
     public function index()
     {
         //
-        //
         $user = auth()->user();
 
         if(!$user->can('listar exercicio')){
@@ -95,7 +94,7 @@ class ExercicioController extends Controller
             
             $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
             
-            $exercicio = Exercicio::create([
+            Exercicio::create([
                 'entidade_id' => $entidade->empresa->id, 
                 'nome' => $request->nome,
                 'status' => $request->status,
@@ -115,7 +114,7 @@ class ExercicioController extends Controller
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
         
-        return redirect()->back()->with("success", "Dados Cadastrar com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);  
       
     }
 
@@ -220,7 +219,7 @@ class ExercicioController extends Controller
         }
         
         $exercicio = Exercicio::findOrFail($id);
-
+        
         $head = [
             "titulo" => "Editar Exercício",
             "descricao" => env('APP_NAME'),
@@ -259,9 +258,6 @@ class ExercicioController extends Controller
     
             $exercicio = Exercicio::findOrFail($id);
             $exercicio->update($request->all());
-            
-            $exercicio->update();
-            
             // Se todas as operações foram bem-sucedidas, você pode fazer o commit
             DB::commit();
         } catch (\Exception $e) {
@@ -272,8 +268,7 @@ class ExercicioController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-
-        return redirect()->back()->with("success", "Dados Actualizados com Sucesso!");
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);  
 
     }
 
@@ -308,8 +303,8 @@ class ExercicioController extends Controller
             return redirect()->back();
             // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
         }
-        return redirect()->back()->with("success", "Dados Excluído com Sucesso!");
-
+        
+        return response()->json(['success' => true, 'message' => "Dados Excluído com sucesso!"], 200);  
     }
 
 }

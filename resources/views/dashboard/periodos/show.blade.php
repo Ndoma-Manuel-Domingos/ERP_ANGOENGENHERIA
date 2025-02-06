@@ -9,12 +9,12 @@
     <div class="container-fluid">
       <div class="row mb-2">
         <div class="col-sm-6">
-          <h1 class="m-0">Detalhe Exercício</h1>
+          <h1 class="m-0">Detalhe Períodos</h1>
         </div><!-- /.col -->
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-right">
-            <li class="breadcrumb-item"><a href="{{ route('exercicios.index') }}">Voltar</a></li>
-            <li class="breadcrumb-item active">Exercício</li>
+            <li class="breadcrumb-item"><a href="{{ route('periodos.index') }}">Voltar</a></li>
+            <li class="breadcrumb-item active">Períodos</li>
           </ol>
         </div><!-- /.col -->
       </div><!-- /.row -->
@@ -48,47 +48,46 @@
         </div>
         <div class="col-12">
           <div class="card">
-            @if ($exercicio)
+            @if ($periodo)
             <!-- /.card-header -->
             <div class="card-body table-responsive">
               <table class="table table-hover text-nowrap">
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>exercicio</th>
+                    <th>Período</th>
+                    <th>Exercício</th>
+                    <th>Mês Processamento</th>
+                    <th>Dias Uteis</th>
+                    <th>Dias Fixo</th>
                     <th>Estado</th>
                     <th>Data Ínicio</th>
                     <th>Data Final</th>
-                    <th>Create At</th>
-                    <th>Update At</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{{ $exercicio->id }}</td>
-                    <td>{{ $exercicio->nome }}</td>
-                    <td>{{ $exercicio->inicio }}</td>
-                    <td>{{ $exercicio->final }}</td>
-                    <td>{{ $exercicio->status }}</td>
-                    <td>{{ $exercicio->created_at }}</td>
-                    <td>{{ $exercicio->updated_at }}</td>
+                    <td>{{ $periodo->id }}</td>
+                    <td>{{ $periodo->nome ?? "" }}</td>
+                    <td>{{ $periodo->exercicio->nome ?? "" }}</td>
+                    <td>{{ $periodo->mes_processamento ?? 0 }}</td>
+                    <td>{{ $periodo->dias_uteis ?? 0 }}</td>
+                    <td>{{ $periodo->dias_fixo ?? 0 }}</td>
+                    <td>{{ $periodo->status }}</td>
+                    <td>{{ $periodo->inicio ?? "" }}</td>
+                    <td>{{ $periodo->final ?? "" }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <div class="card-footer clearfix d-flex">
-              <a href="{{ route('exercicios.edit', $exercicio->id) }}" class="btn btn-sm btn-success mx-1">
+              <a href="{{ route('periodos.edit', $periodo->id) }}" class="btn btn-sm btn-success mx-1">
                 <i class="fas fa-edit"></i>
               </a>
-              <form action="{{ route('exercicios.destroy', $exercicio->id ) }}" method="post">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-sm btn-danger mx-1"
-                  onclick="return confirm('Tens Certeza que Desejas excluir esta Exercício?')">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </form>
+              <button class="btn btn-sm btn-danger mx-1 delete-record" data-id="{{ $periodo->id }}">
+                <i class="fas fa-trash"></i> Eliminar
+              </button>
             </div>
             @endif
 
@@ -103,4 +102,52 @@
 </div>
 <!-- /.content-wrapper -->
 
+@endsection
+
+@section('scripts')
+<script>
+    $(document).on('click', '.delete-record', function(e) {
+
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+
+        // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
+
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, excluir!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('periodos.destroy', ':id') }}`.replace(':id', recordId)
+                    , method: 'DELETE'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
+    });
+</script>
 @endsection

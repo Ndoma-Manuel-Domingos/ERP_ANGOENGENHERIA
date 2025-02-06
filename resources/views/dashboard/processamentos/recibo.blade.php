@@ -66,7 +66,6 @@
             font-size: 9px;
         }
 
-
         .marca-dagua {
             position: fixed;
             top: 50%;
@@ -99,6 +98,9 @@
 
         <header style="position: absolute;top: 30;right: 30px;left: 30px;">
             <table>
+                <td rowspan="">
+                    <img src="{{ public_path("images/empresa/".$tipo_entidade_logado->empresa->logotipo) }}" alt="" style="text-align: center;height: 80px;width: 70px;">
+                </td>
                 <tr>
                     <td style="padding: 5px 0;">
                         <strong>{{ $tipo_entidade_logado->empresa->nome ?? "" }}</strong>
@@ -123,7 +125,7 @@
             </table>
         </header>
 
-        <main style="position: absolute;top: 120px;right: 30px;left: 30px;">
+        <main style="position: absolute;top: 200px;right: 30px;left: 30px;">
             <table>
                 <tr>
                     <th style="font-size: 13px;text-transform: uppercase;border-bottom: 2px solid #3f3f3f;padding: 5px;">Recibo de {{ $processamento->processamento->nome }} </th>

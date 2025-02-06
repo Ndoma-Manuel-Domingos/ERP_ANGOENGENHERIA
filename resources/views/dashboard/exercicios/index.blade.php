@@ -66,7 +66,7 @@
                         @if ($exercicios)
                         <!-- /.card-header -->
                         <div class="card-body table-responsive">
-                            <table class="table table-hover text-nowrap" id="carregar_tabela"  style="width: 100%">
+                            <table class="table table-hover text-nowrap" id="carregar_tabela" style="width: 100%">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -96,31 +96,28 @@
                                                     @if (Auth::user()->can('listar exercicio'))
                                                     <a class="dropdown-item" href="{{ route('exercicios.show', $item->id) }}"><i class="fas fa-eye text-info"></i> Detalhes</a>
                                                     @endif
-                                                    
+
                                                     @if (Auth::user()->can('listar exercicio'))
-                                                        @if ($item->status == "desactivo")
-                                                        <a class="dropdown-item" href="{{ route('activar-exercicios', $item->id) }}"><i class="fas fa-check text-info"></i> Activar</a>
-                                                        @endif
-                                                        
-                                                        @if ($item->status == "activo")
-                                                        <a class="dropdown-item" href="{{ route('desactivar-exercicios', $item->id) }}"><i class="fas fa-times text-info"></i> Desactivar</a>
-                                                        @endif
+                                                    @if ($item->status == "desactivo")
+                                                    <a class="dropdown-item" href="{{ route('activar-exercicios', $item->id) }}"><i class="fas fa-check text-info"></i> Activar</a>
                                                     @endif
-                                                    
+
+                                                    @if ($item->status == "activo")
+                                                    <a class="dropdown-item" href="{{ route('desactivar-exercicios', $item->id) }}"><i class="fas fa-times text-info"></i> Desactivar</a>
+                                                    @endif
+                                                    @endif
+
                                                     @if (Auth::user()->can('editar exercicio'))
                                                     <a class="dropdown-item" href="{{ route('exercicios.edit', $item->id) }}"><i class="fas fa-edit text-success"></i> Editar</a>
                                                     @endif
                                                     <div class="dropdown-divider"></div>
                                                     @if (Auth::user()->can('eliminar exercicio'))
-                                                    <form action="{{ route('exercicios.destroy', $item->id ) }}" method="post">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger dropdown-item" onclick="return confirm('Tens Certeza que Desejas excluir esta exercício?')">
-                                                            <i class="fas fa-trash text-danger"></i> Eliminar
-                                                        </button>
-                                                    </form>
+                                                    <button class="btn btn-sm btn-danger dropdown-item delete-record" data-id="{{ $item->id }}">
+                                                        <i class="fas fa-trash text-danger"></i> Eliminar
+                                                    </button>
                                                     @endif
                                                 </div>
+                                            </div>
                                         </td>
 
                                     </tr>
@@ -130,7 +127,7 @@
                             </table>
                         </div>
                         <!-- /.card-body -->
-             
+
                         @endif
 
                     </div>
@@ -147,17 +144,61 @@
 @endsection
 
 @section('scripts')
-  <script>
-    $(function() {
-      $("#carregar_tabela").DataTable({
-        language: {
-          url: "{{ asset('plugins/datatables/pt_br.json') }}"
-        },
-        "responsive": true,
-        "lengthChange": false,
-        "autoWidth": false,
-        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
-      }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+<script>
+    $(document).on('click', '.delete-record', function(e) {
+        e.preventDefault();
+        let recordId = $(this).data('id'); // Obtém o ID do registro
+        // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
+
+        Swal.fire({
+            title: 'Você tem certeza?'
+            , text: "Esta ação não poderá ser desfeita!"
+            , icon: 'warning'
+            , showCancelButton: true
+            , confirmButtonColor: '#d33'
+            , cancelButtonColor: '#3085d6'
+            , confirmButtonText: 'Sim, excluir!'
+            , cancelButtonText: 'Cancelar'
+        , }).then((result) => {
+            if (result.isConfirmed) {
+                // Envia a solicitação AJAX para excluir o registro
+                $.ajax({
+                    url: `{{ route('exercicios.destroy', ':id') }}`.replace(':id', recordId)
+                    , method: 'DELETE'
+                    , data: {
+                        _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                    }
+                    , beforeSend: function() {
+                        // Você pode adicionar um loader aqui, se necessário
+                        progressBeforeSend();
+                    }
+                    , success: function(response) {
+                        Swal.close();
+                        // Exibe uma mensagem de sucesso
+                        showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                        window.location.reload();
+                    }
+                    , error: function(xhr) {
+                        Swal.close();
+                        showMessage('Erro!', 'Ocorreu um erro ao excluir o registro. Tente novamente.', 'error');
+                    }
+                , });
+            }
+        });
     });
-  </script>
+
+
+    $(function() {
+        $("#carregar_tabela").DataTable({
+            language: {
+                url: "{{ asset('plugins/datatables/pt_br.json') }}"
+            }
+            , "responsive": true
+            , "lengthChange": false
+            , "autoWidth": false
+            , "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+    });
+
+</script>
 @endsection
