@@ -11,13 +11,11 @@ use App\Models\ConfiguracaoEmpressora;
 use App\Models\ContaCliente;
 use App\Models\ContaFornecedore;
 use App\Models\ControloSistema;
-use App\Models\DadoEmpresa;
 use App\Models\Entidade;
 use App\Models\Fornecedore;
 use App\Models\Loja;
 use App\Models\Marca;
 use App\Models\Mesa;
-use App\Models\MovimentoCaixa;
 use App\Models\Sala;
 use App\Models\TipoEntidade;
 use App\Models\User;
@@ -264,53 +262,7 @@ class AppController extends Controller
             $configuracao_impressao->save();
 
             //********************************** */
-            //******* CRIAR LOJA AUTOMATICAMENTE */
-            $criar_loja = Loja::create([
-                'nome' => "Loja Principal",
-                'status' => 'activo',
-                'codigo_postal' => '000-000',
-                'morada' => "",
-                'localidade' => "Luanda",
-                'telefone' => "000-000-000",
-                'email' => $request->email,
-                'cae' => NULL,
-                'descricao' => NULL,
-                'user_id' => $user->id,
-                'entidade_id' => $entidade->id, 
-            ]);
-            $criar_loja->save();
-            //********************************** */
 
-            // ************************************************
-            /// CRIAR CAIXA AUTOMATICAMENTE
-            $criar_caixas = Caixa::create([
-                'nome' => "Caixa principal",
-                'status' => "fechado",
-                'conta_ordem' => 1,
-                'conta' => '45.1.1',
-                'user_id' => $user->id,
-                'active' => false,
-                "tipo_caixa" => "auto",
-                "vencimento" => date("Y-m-d"),
-                "documento_predefinido" => "FT",
-                "aspecto" => "auto",
-                "metodo_impressao" => "browser",
-                "modelo" => "auto",
-                "impressao_papel" => "sim",
-                "modelo_email" => "auto",
-                "finalizar_avancado" => "sim",
-                "referencia_produtos" => "nao",
-                "precos_produtos" => "sim",
-                "modo_funcionamento" => "normal",
-                "listar_produtos" => "all",
-                "grupo_precos" => "normal",
-                "numeracao_pedidos_mesa" => "nao",
-                "loja_id" => $criar_loja->id,
-                'entidade_id' => $entidade->id, 
-            ]);
-
-            $criar_caixas->save();
-            //**************************************** */
 
             //******************************************** */
             //**************CRIAR SALA AUTOMATICAMENTE ***** */
@@ -431,9 +383,6 @@ class AppController extends Controller
             DB::rollback();
             // Alert::danger('Error', $e->getMessage());
             return redirect()->route('register')->with('danger', $e->getMessage());
-            // return Response()->json($e->getMessage());
-            // Trate o erro ou exiba uma mensagem de falha
-            // por exemplo: return response()->json(['message' => 'Erro ao salvar'], 500);
         }
 
         /*********************************************************** */
@@ -451,7 +400,6 @@ class AppController extends Controller
     {
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
-        
         if($entidade->empresa) {
         
             $caixaActivo = Caixa::where([
@@ -466,16 +414,13 @@ class AppController extends Controller
                     $update = Caixa::findOrFail($caixaActivo->id);
                     $update->continuar_apos_login = false;
                     $update->update();
-                
-                    Alert::error('Erro', 'Tens um caixa aberto, Não pode sair do sistema sem antes fechar o caixa, por favor!');
-                    return redirect()->route('caixa.fechamento_caixa');    
+                    return response()->json(['message' => 'Tens um caixa aberto, Não pode sair do sistema sem antes fechar o caixa, por favor', 'success' => false, 'redirect' => route('caixa.fechamento_caixa', $caixaActivo->id)], 404);
                 }
             }
- 
         }
     
         Auth::logout();
-        return redirect()->route('login')->with('success', 'Obrigado Volte Sempre');
+        return response()->json(['success' => true, 'redirect' => route('login')]);
     }
     
     //

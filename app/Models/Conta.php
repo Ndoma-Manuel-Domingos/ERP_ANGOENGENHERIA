@@ -25,6 +25,7 @@ class Conta extends Model
         'serie',
         'classe_id',
         'conta',
+        'type',
         'user_id',
         'entidade_id',
     ];

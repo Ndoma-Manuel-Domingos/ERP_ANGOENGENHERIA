@@ -66,7 +66,7 @@
                         @if ($periodos)
                         <!-- /.card-header -->
                         <div class="card-body table-responsive">
-                            <table class="table table-hover text-nowrap" id="carregar_tabela"  style="width: 100%">
+                            <table class="table table-hover text-nowrap" id="carregar_tabela" style="width: 100%">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -124,7 +124,7 @@
                             </table>
                         </div>
                         <!-- /.card-body -->
-              
+
                         @endif
 
                     </div>
@@ -141,8 +141,8 @@
 @endsection
 
 @section('scripts')
-  <script>
-      $(document).on('click', '.delete-record', function(e) {
+<script>
+    $(document).on('click', '.delete-record', function(e) {
         e.preventDefault();
         let recordId = $(this).data('id'); // Obtém o ID do registro
         // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
@@ -183,18 +183,18 @@
             }
         });
     });
-
-
+    
     $(function() {
-      $("#carregar_tabela").DataTable({
-        language: {
-          url: "{{ asset('plugins/datatables/pt_br.json') }}"
-        },
-        "responsive": true,
-        "lengthChange": false,
-        "autoWidth": false,
-        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
-      }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
+        $("#carregar_tabela").DataTable({
+            language: {
+                url: "{{ asset('plugins/datatables/pt_br.json') }}"
+            }
+            , "responsive": true
+            , "lengthChange": false
+            , "autoWidth": false
+            , "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        }).buttons().container().appendTo('#carregarTabelaEstudantes_wrapper .col-md-6:eq(0)');
     });
-  </script>
+
+</script>
 @endsection

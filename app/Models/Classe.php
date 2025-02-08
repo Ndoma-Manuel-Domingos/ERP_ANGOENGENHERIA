@@ -25,6 +25,7 @@ class Classe extends Model
         'sigla',
         'ordem_conta',
         'conta',
+        'type',
         'user_id',
         'entidade_id',
     ];

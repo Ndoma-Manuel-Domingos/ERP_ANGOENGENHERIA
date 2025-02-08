@@ -434,6 +434,7 @@ Route::get('/', [AppController::class, 'login'])->name('login_');
             Route::get('/dashboard/fechamento-caixas/{id?}', [AppCaixaController::class, 'fechamento_caixa'])->name('caixa.fechamento_caixa');
             Route::post('/dashboard/fechamento-caixas', [AppCaixaController::class, 'fechamento_caixa_create'])->name('caixa.fechamento_caixa_create');
             Route::post('/dashboard/continuar-com-caixas', [AppCaixaController::class, 'continuar_caixa_create'])->name('caixa.continuar_caixa_create');
+            Route::post('/dashboard/aceito-configurar-sistema', [AppCaixaController::class, 'aceitoConfigurarSistema'])->name('aceito-configurar-sistema');
             
             Route::get('/dashboard/relatorio-fechamento-caixa/{data_inicio}/{data_final}/{caixa_id}', [AppCaixaController::class, 'relatorio_fechamento_caixa'])->name('relatorio-fechamento-caixa');
             

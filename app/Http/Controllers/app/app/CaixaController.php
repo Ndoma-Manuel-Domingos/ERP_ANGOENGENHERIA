@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\TraitHelpers;
 use App\Models\Caixa;
 use App\Models\Categoria;
+use App\Models\Classe;
 use App\Models\Cliente;
 use App\Models\Conta;
 use App\Models\ContaBancaria;
+use App\Models\ContaCliente;
+use App\Models\ContaFornecedore;
 use App\Models\Entidade;
 use App\Models\Exercicio;
 use App\Models\Contrapartida;
@@ -1237,7 +1240,7 @@ class CaixaController extends Controller
         if(!$user->can('fecho do caixa')){
             Alert::success("Sucesso!", "Você não possui permissão para esta operação, por favor, contacte o administrador!");
             return redirect()->back()->with('danger', "Você não possui permissão para esta operação, por favor, contacte o administrador!");
-        }
+        }   
    
         $entidade = User::with('empresa')->findOrFail(Auth::user()->id);
         
@@ -1257,6 +1260,423 @@ class CaixaController extends Controller
 
         return response()->json(['caixaActivo' => $caixaActivo], 200);
    
+    }  
+
+    public function aceitoConfigurarSistema(Request $request)
+    {   
+        $entidade = User::with('empresa.tipo_entidade.modulos')->findOrFail(Auth::user()->id);
+        
+        $ano = $ano ?? date('Y');
+        
+        try {
+            DB::beginTransaction();
+            // Realizar operações de banco de dados aqui
+      
+            // criar exercicio
+            
+            if(!Exercicio::where('nome', 'activo')->where('entidade_id', $entidade->empresa->id)->first()){
+                $exercicio = Exercicio::create([
+                    'entidade_id' => $entidade->empresa->id, 
+                    'nome' => $ano,
+                    'status' => 'activo',
+                    'inicio' => date("{$ano}-01-01"),
+                    'final' => date("{$ano}-12-31"),
+                    'user_id' => Auth::user()->id,
+                ]);          
+                
+                for ($mes = 1; $mes <= 12; $mes++) {
+                    // Obtém o primeiro e o último dia do mês
+                    $primeiro_dia = date("Y-m-d", strtotime("$ano-$mes-01"));
+                    $ultimo_dia = date("Y-m-t", strtotime($primeiro_dia));
+                    
+                    // Obtém o número total de dias do mês
+                    $dias_no_mes = date("t", strtotime($primeiro_dia));
+                    $nome = date("F", strtotime($primeiro_dia));
+            
+                    $periodos = Periodo::create([
+                        'entidade_id' => $entidade->empresa->id, 
+                        'nome' => $this->mes_em_portugues($nome),
+                        'status' => 'activo',
+                        'mes_processamento' => $mes,
+                        'dias_uteis' => 22,
+                        'dias_fixo' => $dias_no_mes,
+                        'inicio' => $primeiro_dia,
+                        'final' => $ultimo_dia,
+                        'exercicio_id' => $exercicio->id,
+                        'user_id' => Auth::user()->id,
+                    ]);
+                }
+            }
+                
+            // START CONTABILIDADE 
+           
+            $classe1 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Meios Fixos e Investimentos',
+                'sigla' => 'MFI',
+                'status' => 'activo',
+                'conta' => 'Classe 1',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_1() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe1, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            
+            $classe2 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Existências',
+                'sigla' => 'EX',
+                'status' => 'activo',
+                'conta' => 'Classe 2',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_2() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe2, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            $classe3 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Terceiros',
+                'sigla' => 'TER',
+                'status' => 'activo',
+                'conta' => 'Classe 3',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_3() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe3, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            $classe4 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Meios Monetários',
+                'sigla' => 'MMON',
+                'status' => 'activo',
+                'conta' => 'Classe 4',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_4() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe4, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            
+            $classe5 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Capital e Reservas',
+                'sigla' => 'CRE',
+                'status' => 'activo',
+                'conta' => 'Classe 5',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_5() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe5, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            $classe6 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Proveitos por Natureza',
+                'sigla' => 'PR.NA',
+                'status' => 'activo',
+                'conta' => 'Classe 6',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_6() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe6, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            // foreach($this->classes_pgc() as $class){
+            //     $classe = $this->criarClasse($entidade, $class['conta'], $class['nome'], $class['sigla']);
+                
+            //     foreach ($this->plano_geral_contas() as $contaNum => $contaData) {
+            //         $conta = $this->criarConta($entidade, $classe, $contaData['nome'], $contaNum);
+            //         if($contaData['subcontas']){
+            //             foreach ($contaData['subcontas'] as $subNum => $subNome) {
+            //                 $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+            //             }
+            //         }
+            //     }
+            // }
+            
+                        
+            //**************************************** */
+            $classe7 = Classe::create([
+                'entidade_id' => $entidade->empresa->id,
+                'nome' => 'Custos por Natureza',
+                'sigla' => 'CU.NA',
+                'status' => 'activo',
+                'conta' => 'Classe 7',
+                'user_id' => Auth::id(),
+            ]);
+                
+            foreach ($this->plano_geral_contas_classe_7() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe7, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            $classe8 = Classe::create([
+                'entidade_id' => $entidade->empresa->id, 
+                'nome' => 'Resultados',
+                'sigla' => 'RES',
+                'status' => 'activo',
+                'conta' => 'Classe 8',
+                'user_id' => Auth::user()->id,
+            ]);
+            
+            foreach ($this->plano_geral_contas_classe_8() as $contaNum => $contaData) {
+                $conta = $this->criarConta($entidade, $classe8, $contaData['nome'], $contaNum);
+                foreach ($contaData['subcontas'] as $subNum => $subNome) {
+                    $this->criarSubconta($entidade, $conta, $subNum, $subNome);
+                }
+            }
+            
+            // END CONTABILIDADE 
+            
+            
+            //******* CRIAR LOJA AUTOMATICAMENTE */
+            $criar_loja = Loja::create([
+                'nome' => "Loja Principal",
+                'status' => 'activo',
+                'codigo_postal' => '000-000',
+                'morada' => "",
+                'localidade' => "Luanda",
+                'telefone' => "000-000-000",
+                'email' => $entidade->empresa->email,
+                'cae' => NULL,
+                'descricao' => NULL,
+                'user_id' => Auth::user()->id,
+                'entidade_id' => $entidade->empresa->id, 
+            ]);
+            //********************************** */
+            
+            $numero0 = '43.1.1';
+            $code0 = uniqid(time()-2236);
+            
+            $banco = ContaBancaria::create([
+                'banco_id' => 1,
+                'nome' => 'Banco Angolano de Investimentos',
+                'status' => 'fechado',
+                'user_id' => Auth::user()->id,
+                'numero_conta' => NULL,
+                'tipo_banco_id' => 'DO',
+                'iban' => NULL,
+                'code' => $code0,
+                'conta' => $numero0,
+                
+                "moeda" => 'KZ',
+                
+                'nib' => NULL,
+                'switf' => NULL,
+                'nome_agencia' => NULL,
+                'numero_gestor' => NULL,
+                'nome_titular' => NULL,
+                'morada_titular' => NULL,
+                'local_titular' => NULL,
+                'codigo_postal_titular' => NULL,
+                
+                "loja_id" => $criar_loja->id,
+                'entidade_id' => $entidade->empresa->id,
+            ]);
+            
+            $conta_banco =  Conta::where('entidade_id', $entidade->empresa->id)->where('conta', '43')->first();
+            if($conta_banco){
+                Subconta::create([
+                    'entidade_id' => $entidade->empresa->id,
+                    'numero' => $numero0,
+                    'nome' => 'Banco Angolano de Investimentos',
+                    'tipo_conta' => 'M',
+                    'code' => $code0,
+                    'status' => 'activo',
+                    'conta_id' => $conta_banco->id,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+
+
+            $code = uniqid(time());
+            $code_caixa = uniqid(time()+202);
+            $numero = '45.1.1';
+            // ************************************************
+            /// CRIAR CAIXA AUTOMATICAMENTE
+            $criar_caixas = Caixa::create([
+                'nome' => "Caixa principal",
+                'status' => "fechado",
+                'conta_ordem' => 1,
+                'conta' => $numero,
+                'code_caixa' => $code_caixa,
+                'user_id' => Auth::user()->id,
+                'active' => false,
+                "tipo_caixa" => "auto",
+                "vencimento" => date("Y-m-d"),
+                "documento_predefinido" => "FT",
+                "aspecto" => "auto",
+                "metodo_impressao" => "browser",
+                "modelo" => "auto",
+                "impressao_papel" => "sim",
+                "modelo_email" => "auto",
+                "finalizar_avancado" => "sim",
+                "referencia_produtos" => "nao",
+                "precos_produtos" => "sim",
+                "modo_funcionamento" => "normal",
+                "listar_produtos" => "all",
+                "grupo_precos" => "normal",
+                "numeracao_pedidos_mesa" => "nao",
+                "loja_id" => $criar_loja->id,
+                'entidade_id' => $entidade->empresa->id, 
+            ]);
+            
+            $conta_caixa =  Conta::where('entidade_id', $entidade->empresa->id)->where('conta', '45')->first();
+            if($conta_caixa){
+                Subconta::create([
+                    'entidade_id' => $entidade->empresa->id,
+                    'numero' => $numero,
+                    'nome' => 'Caixa principal',
+                    'tipo_conta' => 'M',
+                    'code' => $code,
+                    'status' => 'activo',
+                    'conta_id' => $conta_caixa->id,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+            
+            $code1 = uniqid(time() + 22);
+            $numero1 = '32.1.2.1.1';
+            
+            $fornecedor = Fornecedore::create([
+                "nif" => "99999999",
+                "nome" => "Fornecedor Diversos",
+                "pais" => "AO",
+                "status" => true,
+                "conta" => $numero1,
+                "code" => $code1,
+                "codigo_postal" => "00000",
+                "localidade" => "Angola-Luanda",
+                "telefone" => "000-000-000",
+                "telemovel" => "244-000-000-000",
+                "email" => "fornecedor-diversos@gmail.com",
+                "website" => "www.fornecedor-diversos.com",
+                "observacao" => "Observação fornecedor diversos",         
+                'user_id' => Auth::id(),
+                'entidade_id' => $entidade->empresa->id, 
+            ]);
+            
+            ContaFornecedore::create([
+                "saldo" => 0,
+                "divida_corrente" => 0,
+                "divida_vencidade" => 0,         
+                'fornecedor_id' => $fornecedor->id,
+                'user_id' => Auth::id(),
+                'entidade_id' => $entidade->empresa->id,
+            ]);
+            
+            $conta_fornecedor =  Conta::where('entidade_id', $entidade->empresa->id)->where('conta', '32')->first();
+            
+            if($conta_fornecedor){
+                Subconta::create([
+                    'entidade_id' => $entidade->empresa->id,
+                    'numero' => $numero1,
+                    'nome' => 'Fornecedor Diversos',
+                    'tipo_conta' => 'M',
+                    'code' => $code1,
+                    'status' => 'activo',
+                    'conta_id' => $conta_fornecedor->id,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+              
+            $code2 = uniqid(time() + 220);
+            $numero2 = '31.1.2.1.1';
+            
+            $clientes = Cliente::create([
+                "nif" => "999999999",
+                "nome" => "CONSUMIDOR FINAL",
+                "pais" => "AO",
+                "status" => true,
+                "conta" => $numero2 ,
+                "code" => $code2 ,
+                "gestor_conta" => Auth::id(),
+                "codigo_postal" => "00346347",
+                "localidade" => "Angola-Luanda",
+                "telefone" => "999999999",
+                "telemovel" => "000-000-000",
+                "vencimento" => 0,
+                "email" => "consumidor-final@gmail.com",
+                "website" => NULL,
+                "referencia_externa" => NULL,
+                "observacao" => NULL,         
+                'user_id' => Auth::id(),
+                'entidade_id' => $entidade->empresa->id,     
+            ]);
+            
+            ContaCliente::create([
+                'divida_corrente' => 0,
+                'divida_vencida' => 0,
+                'saldo' => 0,
+                'cliente_id' => $clientes->id,
+                'user_id' => Auth::id(),
+                'entidade_id' => $entidade->empresa->id,  
+            ]); 
+            
+            $conta_cliente =  Conta::where('entidade_id', $entidade->empresa->id)->where('conta', '31')->first();
+            
+            if($conta_cliente){
+                Subconta::create([
+                    'entidade_id' => $entidade->empresa->id,
+                    'numero' => $numero2,
+                    'nome' => 'CONSUMIDOR FINAL',
+                    'tipo_conta' => 'M',
+                    'code' => $code2,
+                    'status' => 'activo',
+                    'conta_id' => $conta_cliente->id,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+
+                     
+            $update = Entidade::findOrFail($entidade->empresa->id);
+            $update->first_login_system = true;
+            $update->update();
+            
+            // Se todas as operações foram bem-sucedidas, você pode fazer o commit
+            DB::commit();
+        } catch (\Exception $e) {
+            // Caso ocorra algum erro, você pode fazer rollback para desfazer as operações
+            DB::rollback();
+
+            Alert::warning('Informação', $e->getMessage());
+            return redirect()->back();
+            // Você também pode tratar o erro de alguma forma, como registrar logs ou retornar uma mensagem de erro para o usuário.
+        }
+   
+        
+        return response()->json(['success' => true, 'message' => "Dados salvos com sucesso!"], 200);  
+
+        
     }  
 
     // relatorio fechamento caixa

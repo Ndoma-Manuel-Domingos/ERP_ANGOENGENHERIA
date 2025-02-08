@@ -63,6 +63,7 @@ class Entidade extends Model
         'finalizacao_venda',
         'promocoes_email',
         'novidade_email',
+        'first_login_system',
         'marca_d_agua_facturas',
         'sigla_factura',
         'ano_factura',

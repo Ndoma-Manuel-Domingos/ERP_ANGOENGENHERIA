@@ -24,6 +24,7 @@ class Subconta extends Model
         'status',
         'numero',
         'tipo_conta',
+        'type',
         'code',
         'conta_id',
         'tipo_operacao',

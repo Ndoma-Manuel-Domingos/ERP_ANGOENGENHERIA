@@ -171,8 +171,11 @@
                         </a>
                         
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger" data-widget="control-sidebar" data-slide="true" href="{{ route('logout') }}"
+                        {{-- <a class="dropdown-item text-danger" data-widget="control-sidebar" data-slide="true" href="{{ route('logout') }}"
                             onclick="event.preventDefault();document.getElementById('formLoggout').submit();" role="button">
+                            <i class="fas fa-sign-out-alt"></i> Terminar sessão
+                        </a> --}}
+                        <a class="dropdown-item text-danger delete-record" data-widget="control-sidebar" data-slide="true" role="button">
                             <i class="fas fa-sign-out-alt"></i> Terminar sessão
                         </a>
                           
@@ -184,7 +187,6 @@
             </ul>
         </nav>
         <!-- /.navbar -->
-
         <!-- Main Sidebar Container -->
         @include('includes.main-sidebar-container')
 
@@ -205,7 +207,6 @@
     <!-- ./wrapper -->
 
     @if (session('caixaAberto'))
-    {{-- class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true" --}}
     <div class="modal fade" id="caixaAbertoModal" tabindex="-1" role="dialog" aria-labelledby="caixaAbertoModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-lg" role="document">
             <div class="modal-content">
@@ -218,6 +219,24 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger" id="fecharCaixaBtn">Fechar Caixa</button>
                     <button type="button" class="btn btn-success" id="continuarVendasBtn">Continuar Vendas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if (session('FirstLoginSystem'))
+    <div class="modal fade" id="FirstLoginSystemModal" tabindex="-1" role="dialog" aria-labelledby="FirstLoginSystemModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="FirstLoginSystemModalLabel">Bem-vindo ao {{ ENV('APP_NAME') }}</h5>
+                </div>
+                <div class="modal-body">
+                    Parabéns por criar sua conta! Para garantir que o sistema funcione perfeitamente e você aproveite todos os recursos, é obrigatório configurar os pontos principais antes de começar.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="AceitoConfigurarSistemaBTN">Aceito</button>
                 </div>
             </div>
         </div>
@@ -275,6 +294,63 @@
                 });
                 
             @endif
+            
+            @if (session('FirstLoginSystem'))
+                const caixaModalElement = document.getElementById('FirstLoginSystemModal');
+                const caixaModal = new bootstrap.Modal(caixaModalElement, {
+                    backdrop: 'static', // Impede fechamento ao clicar fora
+                    keyboard: false     // Impede fechamento ao pressionar "Esc"
+                });
+                
+               // Verificar se o operador já clicou em "Continuar"
+                if (!localStorage.getItem('continueSalesR')) {
+                    caixaModal.show();
+                }
+                          
+                // Botão "Continuar Vendas"
+                document.getElementById('AceitoConfigurarSistemaBTN').addEventListener('click', () => {
+                    $.ajax({
+                        url: `{{ route('aceito-configurar-sistema') }}`, // URL do endpoint no backend
+                        method: 'POST', // Método HTTP definido no formulário
+                        headers: {
+                            "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                        }
+                        , beforeSend: function() {
+                            // Você pode adicionar um loader aqui, se necessário
+                            progressBeforeSend();
+                        }
+                        , success: function(response) {
+                            // Feche o alerta de carregamento
+                            Swal.close();
+                            // Exibe uma mensagem de sucesso
+                            showMessage('Sucesso!', 'Operação realizada com sucesso!', 'success');
+                            window.location.reload();
+                        }
+                        , error: function(xhr) {
+                            // Feche o alerta de carregamento
+                            Swal.close();
+        
+                            // Trata erros e exibe mensagens para o usuário
+                            if (xhr.status === 422) {
+                                let errors = xhr.responseJSON.errors;
+                                let messages = '';
+                                $.each(errors, function(key, value) {
+                                    messages += `${value}\n *`; // Exibe os erros
+                                });
+        
+                                showMessage('Erro de Validação!', messages, 'error');
+        
+                            } else {
+        
+                                showMessage('Erro!', xhr.responseJSON.message, 'error');
+        
+                            }
+        
+                        }
+                    , });
+                });
+                
+            @endif
         });
     </script>
 
@@ -323,6 +399,57 @@
     <script src="{{ asset('assets/js/chart-.js') }}"></script>
 
     <script>  
+    
+        $(document).on('click', '.delete-record', function(e) {
+            e.preventDefault();
+            // let recordId = $(this).data('id'); // Obtém o ID do registro
+            // const url = `{{ route('clientes.destroy', ':id') }}`.replace(':id', recordId);
+            Swal.fire({
+                title: 'Você tem certeza?'
+                , text: "Esta ação não poderá ser desfeita!"
+                , icon: 'warning'
+                , showCancelButton: true
+                , confirmButtonColor: '#d33'
+                , cancelButtonColor: '#3085d6'
+                , confirmButtonText: 'Sim, desejo sair!'
+                , cancelButtonText: 'Cancelar'
+            , }).then((result) => {
+                if (result.isConfirmed) {
+                    // Envia a solicitação AJAX para excluir o registro
+                    $.ajax({
+                        url: `{{ route('logout') }}`
+                        , method: 'POST'
+                        , data: {
+                            _token: '{{ csrf_token() }}', // Inclui o token CSRF
+                        }
+                        , beforeSend: function() {
+                            // Você pode adicionar um loader aqui, se necessário
+                            progressBeforeSend();
+                        }
+                        , success: function(response) {
+                            Swal.close();
+                            // Exibe uma mensagem de sucesso
+                            showMessage('O sucesso não espera por quem desiste!', 
+                                'Antes de sair, lembre-se: cada minuto que você investe aqui é um passo a mais rumo ao seu objetivo. Volte amanhã e continue avançando!', 
+                                'success');
+                               
+                            window.location.href = response.redirect;
+    
+                        }
+                        , error: function(xhr) {
+                            Swal.close();
+                            
+                            if(xhr.responseJSON.success == false){
+                                showMessage('Alerta!', xhr.responseJSON.message, 'warning');
+                            }
+                        
+                            window.location.href = xhr.responseJSON.redirect;
+                            
+                        }
+                    , });
+                }
+            });
+        });
 
         function progressBeforeSend(title = "Processando...", text = "Por favor, aguarde.", icon = 'info' ) {
             Swal.fire({
@@ -371,8 +498,6 @@
             theme: 'bootstrap4'
             })
         });
-
-    
 
     </script>
 </body>
